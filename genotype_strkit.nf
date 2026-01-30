@@ -236,23 +236,23 @@ workflow {
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
-    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out.fasta_gz.first(),bgzip_index_fasta.out.fasta_fai.first(),bgzip_index_fasta.out.fasta_gzi.first())
+    //genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out.fasta_gz.first(),bgzip_index_fasta.out.fasta_fai.first(),bgzip_index_fasta.out.fasta_gzi.first())
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" }  
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
 
-    genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
-    genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
-    genotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
+    //genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
+    //genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
+    //genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
+    //genotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
 
    
-    genotype_TRGT_bams = genotype_TRGT.out.spanning_bam.collect()
+    //genotype_TRGT_bams = genotype_TRGT.out.spanning_bam.collect()
    
-    genotype_STR_bams_trgt = genotype_TRGT_bams.map { it[0] }.view { it -> "Spanning BAM files: ${it}" }
-    genotype_STR_bams_sorted_trgt = genotype_TRGT_bams.map { it[1] }.view { it -> "Spanning Sorted BAM files: ${it}" }
-    genotype_STR_bams_index_trgt = genotype_TRGT_bams.map { it[2] }.view { it -> "Spanning BAM Index files: ${it}" }
+    //genotype_STR_bams_trgt = genotype_TRGT_bams.map { it[0] }.view { it -> "Spanning BAM files: ${it}" }
+    //genotype_STR_bams_sorted_trgt = genotype_TRGT_bams.map { it[1] }.view { it -> "Spanning Sorted BAM files: ${it}" }
+    //genotype_STR_bams_index_trgt = genotype_TRGT_bams.map { it[2] }.view { it -> "Spanning BAM Index files: ${it}" }
 
     mendelian_inheritance(genotype_str_vcf,genotype_str_vcf_gz,genotype_str_vcf_csi)
 
