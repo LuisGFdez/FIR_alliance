@@ -102,6 +102,7 @@ process genotype_TRGT {
         path bed_tr_file
         path reference_genome
         path reference_genome_index
+        path reference_genome_gzi_index
     output:
         tuple path("${input_bam.simpleName}_trgt_genotypes.vcf"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
         tuple path("${input_bam.simpleName}.spanning.bam"), path("${input_bam.simpleName}.spanning.sorted.bam"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), emit: spanning_bam
@@ -229,7 +230,7 @@ workflow {
 
     genotype_strkit(merged.merge_bam,bed_tr_file.first(),snp_files.first(),snps_index.first(),bgzip_index_fasta.out[0].first())
     sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
-    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out[0].first(),bgzip_index_fasta.out[1].first())
+    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out[0].first(),bgzip_index_fasta.out[1].first(),bgzip_index_fasta.out[2].first())
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" }  
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
