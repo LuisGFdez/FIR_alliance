@@ -230,9 +230,9 @@ workflow {
     // bgzip_index_fasta.out[1].view { it -> "Fasta Index: ${it}" }
     // bgzip_index_fasta.out[0].view { it -> "BGZIP Indexed Fasta: ${it}" }
 
-    genotype_strkit(merged.merge_bam,bed_tr_file.first(),snp_files.first(),snps_index.first(),bgzip_index_fasta.out[0].first())
+    genotype_strkit(merged.merge_bam,bed_tr_file.first(),snp_files.first(),snps_index.first(),bgzip_index_fasta.out.bgzip_fasta.first())
     sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
-    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out[0].first(),bgzip_index_fasta.out[1].first(),bgzip_index_fasta.out[2].first())
+    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out.bgzip_fasta,bgzip_index_fasta.out.fasta_index,bgzip_index_fasta.out.fasta_gzi_index)
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" }  
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
