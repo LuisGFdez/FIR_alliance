@@ -207,14 +207,18 @@ workflow {
     // To use in merge_bams process:
     merge_bams_files.set {grouped_bams}
     grouped_bams.view()
-            
-    bed_tr_file = Channel.fromPath(params.bed_file)
+    bed_tr_file = Channel.value(file(params.bed_file))
+    snp_files   = Channel.value(file(params.snps_vcf))
+    snps_index  = Channel.value(file(params.snps_vcf_index))
+    reference_genome = Channel.value(file(params.reference_genome))
+
+    //bed_tr_file = Channel.fromPath(params.bed_file)
     bed_tr_file_trgt = Channel.fromPath(params.bed_file_trgt)             
                         // .view { it -> "bed_tr_file: ${it}" } 
-    reference_genome=Channel.fromPath(params.reference_genome)
+    //reference_genome=Channel.fromPath(params.reference_genome)
                            // .view { it -> "ref_genome: ${it}" }
-    snp_files=Channel.fromPath(params.snps_vcf)
-    snps_index=Channel.fromPath(params.snps_vcf_index)
+    //snp_files=Channel.fromPath(params.snps_vcf)
+    //snps_index=Channel.fromPath(params.snps_vcf_index)
                            // .view { it -> "snp_files: ${it}" }        
     ////define processes              
     bgzip_index_fasta(reference_genome)  
@@ -230,7 +234,7 @@ workflow {
     // bgzip_index_fasta.out[1].view { it -> "Fasta Index: ${it}" }
     // bgzip_index_fasta.out[0].view { it -> "BGZIP Indexed Fasta: ${it}" }
 
-    genotype_strkit(merged.merge_bam,bed_tr_file.first(),snp_files.first(),snps_index.first(),bgzip_index_fasta.out.fasta_gz.first())
+    genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
     genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out.fasta_gz.first(),bgzip_index_fasta.out.fasta_fai.first(),bgzip_index_fasta.out.fasta_gzi.first())
     
