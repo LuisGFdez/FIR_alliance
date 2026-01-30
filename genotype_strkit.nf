@@ -95,7 +95,7 @@ process genotype_strkit {
     """
 }
 process genotype_TRGT {
-
+    tag {input_bam.simpleName}
     publishDir params.outdir_trgt, mode: 'copy'
     input:
         tuple path (input_bam), path (input_bam_index)
@@ -116,8 +116,8 @@ process genotype_TRGT {
     --output-prefix ${input_bam.simpleName}_trgt_genotypes.vcf \
     --threads $task.cpus
 
-    bcftools sort ${input_bam.simpleName}_target_genotypes.vcf | bcftools view -O z -o ${input_bam.simpleName}_target_genotypes_sorted.vcf.gz
-    bcftools index ${input_bam.simpleName}_target_genotypes_sorted.vcf.gz
+    bcftools sort ${input_bam.simpleName}_trgt_genotypes.vcf | bcftools view -O z -o ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
+    bcftools index ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
 
     samtools sort -o ${input_bam.simpleName}.spanning.sorted.bam ${input_bam.simpleName}.spanning.bam
     samtools index ${input_bam.simpleName}.spanning.sorted.bam
