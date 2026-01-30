@@ -96,7 +96,9 @@ process genotype_strkit {
 }
 process genotype_TRGT {
     tag {input_bam.simpleName}
+
     publishDir params.outdir_trgt, mode: 'copy'
+
     input:
         tuple path (input_bam), path (input_bam_index)
         path bed_tr_file
@@ -113,7 +115,7 @@ process genotype_TRGT {
     /home/luisluna/scratch/trgt-v5.0.0-x86_64-unknown-linux-gnu/trgt genotype --genome ${reference_genome} \
     --repeats ${bed_tr_file} \
     --reads ${input_bam} \
-    --output-prefix ${input_bam.simpleName}_trgt_genotypes.vcf \
+    --output-prefix ${input_bam.simpleName}_trgt_genotypes \
     --threads $task.cpus
 
     bcftools sort ${input_bam.simpleName}_trgt_genotypes.vcf | bcftools view -O z -o ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
