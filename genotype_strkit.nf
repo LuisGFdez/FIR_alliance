@@ -103,10 +103,11 @@ process genotype_TRGT {
         tuple path (input_bam), path (input_bam_index)
         path bed_tr_file
         path reference_genome
+        path reference_genome_gz
         path reference_genome_index
         path reference_genome_gzi_index
     output:
-        tuple path("${input_bam.simpleName}_trgt_genotypes.vcf"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
+        tuple path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
         tuple path("${input_bam.simpleName}.spanning.bam"), path("${input_bam.simpleName}.spanning.sorted.bam"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), emit: spanning_bam
     
     script:
@@ -118,7 +119,7 @@ process genotype_TRGT {
     --output-prefix ${input_bam.simpleName}_trgt_genotypes \
     --threads $task.cpus
 
-    bcftools sort ${input_bam.simpleName}_trgt_genotypes.vcf | bcftools view -O z -o ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
+    bcftools sort -Oz -o ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz ${input_bam.simpleName}_trgt_genotypes.vcf.gz
     bcftools index ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
 
     samtools sort -o ${input_bam.simpleName}.spanning.sorted.bam ${input_bam.simpleName}.spanning.bam
@@ -231,7 +232,7 @@ workflow {
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
-    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,bgzip_index_fasta.out.fasta_gz.first(),bgzip_index_fasta.out.fasta_fai.first(),bgzip_index_fasta.out.fasta_gzi.first())
+    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_fai,bgzip_index_fasta.out.fasta_gzi)
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" }  
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
