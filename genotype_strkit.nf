@@ -27,8 +27,8 @@ process bgzip_index_fasta {
     """
     
     echo "Compressing reference genome with bgzip ${reference_genome}"
-    bgzip -@ $task.cpus ${reference_genome}
     samtools faidx ${reference_genome}
+    bgzip -@ $task.cpus ${reference_genome}
     samtools faidx --gzi-idx ${reference_genome}.gz
     """
 }
@@ -211,7 +211,7 @@ workflow {
     bed_tr_file = Channel.value(file(params.bed_file))
     snp_files   = Channel.value(file(params.snps_vcf))
     snps_index  = Channel.value(file(params.snps_vcf_index))
-    reference_genome = Channel.value(file(params.reference_genome))
+    reference_genome = Channel.fromPath(params.reference_genome)
 
     //bed_tr_file = Channel.fromPath(params.bed_file)
     bed_tr_file_trgt = Channel.value(file(params.bed_file_trgt))             
