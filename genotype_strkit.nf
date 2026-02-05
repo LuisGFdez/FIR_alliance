@@ -21,14 +21,14 @@ process bgzip_index_fasta {
         path reference_genome
     output:
         path "${reference_genome}.gz", emit: fasta_gz
-        path "${reference_genome}.gz.fai", emit: fasta_fai
+        path "${reference_genome}.fai", emit: fasta_fai
         path "${reference_genome}.gz.gzi", emit: fasta_gzi
     script:
     """
     
     echo "Compressing reference genome with bgzip ${reference_genome}"
     bgzip -@ $task.cpus ${reference_genome}
-    samtools faidx ${reference_genome}.gz
+    samtools faidx ${reference_genome}
     samtools faidx --gzi-idx ${reference_genome}.gz
     """
 }
