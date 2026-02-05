@@ -28,7 +28,9 @@ process bgzip_index_fasta {
     
     echo "Compressing reference genome with bgzip ${reference_genome}"
     samtools faidx ${reference_genome}
-    bgzip -@ $task.cpus ${reference_genome}
+    ls
+    bgzip -@ $task.cpus ${reference_genome} > ${reference_genome}.gz
+    ls
     samtools faidx --gzi-idx ${reference_genome}.gz
     """
 }
