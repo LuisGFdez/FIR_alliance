@@ -154,8 +154,8 @@ process mendelian_inheritance {
      --caller strkit-vcf \
      --mismatch-out-mi strict \
      --hist \
-     --test \
-     --sig-level SIG_LEVEL \
+     --test x2 \
+     --sig-level 0.05 \
      ${genotype_str_vcf_gz[0]} \
      ${genotype_str_vcf_gz[1]} \
      ${genotype_str_vcf_gz[2]}
