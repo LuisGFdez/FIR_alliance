@@ -19,7 +19,6 @@ process bgzip_index_fasta {
     
     input:
         path reference_genome
-        path reference_genome_index
     output:
         path "${reference_genome}.gz", emit: fasta_gz
         path "${reference_genome}.fai", emit: fasta_fai
@@ -28,9 +27,11 @@ process bgzip_index_fasta {
     """
     
     echo "Compressing reference genome with bgzip ${reference_genome}"
-    bgzip -i -@ $task.cpus ${reference_genome} | samtools faidx --gzi-idx ${reference_genome}.gz
-    echo "Compressing reference genome with bgzip ${reference_genome_index}"
-    samtools faidx ${reference_genome_index}
+    bgzip -@ ${task.cpus} -c ${reference_genome} > ${reference_genome}.gz 
+    samtools faidx --gzi-idx ${reference_genome}.gz
+
+    echo "Compressing reference genome with faidx ${reference_genome}"
+    samtools faidx ${reference_genome}
     """
 }
 
@@ -223,7 +224,7 @@ workflow {
     //snps_index=Channel.fromPath(params.snps_vcf_index)
                            // .view { it -> "snp_files: ${it}" }        
     ////define processes              
-    bgzip_index_fasta(reference_genome,reference_genome)  
+    bgzip_index_fasta(reference_genome)  
     merged = merge_bams(grouped_bams)
 
     //merged.merge_bam.view { it -> "Merged BAM: ${it}" }
