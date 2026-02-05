@@ -213,7 +213,7 @@ workflow {
     reference_genome = Channel.value(file(params.reference_genome))
 
     //bed_tr_file = Channel.fromPath(params.bed_file)
-    bed_tr_file_trgt = Channel.fromPath(params.bed_file_trgt)             
+    bed_tr_file_trgt = Channel.value(file(params.bed_file_trgt))             
                         // .view { it -> "bed_tr_file: ${it}" } 
     //reference_genome=Channel.fromPath(params.reference_genome)
                            // .view { it -> "ref_genome: ${it}" }
@@ -228,21 +228,17 @@ workflow {
    
     //merged.merge_bam.view()
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
-    // View the outputs of bgzip_index_fasta process (multi-channel)
-    // bgzip_index_fasta.out.fasta_index.view { it -> "Fasta Index: ${it}" }
-    // bgzip_index_fasta.out.bgzip_fasta.view { it -> "BGZIP Indexed Fasta: ${it}" }    
-    // bgzip_index_fasta.out[1].view { it -> "Fasta Index: ${it}" }
-    // bgzip_index_fasta.out[0].view { it -> "BGZIP Indexed Fasta: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
-    //genotype_TRGT(merged.merge_bam, bed_tr_file_trgt.first(),bgzip_index_fasta.out.fasta_gz.first(),bgzip_index_fasta.out.fasta_fai.first(),bgzip_index_fasta.out.fasta_gzi.first())
+    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,bgzip_index_fasta.out.fasta_gz.first(),bgzip_index_fasta.out.fasta_fai.first(),bgzip_index_fasta.out.fasta_gzi.first())
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" }  
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
 
-    //genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
+    genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
+    genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
     //genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
     //genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
     //genotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
