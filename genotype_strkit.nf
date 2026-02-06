@@ -183,11 +183,11 @@ process targt_denovo {
      """
      echo "Performing De Novo Mutation Detection on VCF files: ${genotype_trgt_vcf.join(', ')}"
 
-     TRGT-denovo trio --reference ${reference_genome}\
-     --bed repeat.bed
-     --father ${genotype_str_vcf_gz[1]} \
-     --mother ${genotype_str_vcf_gz[2]} \
-     --child ${genotype_str_vcf_gz[0]} \
+     /home/luisluna/scratch/trgt-denovo-v0.3.0-x86_64-unknown-linux-gnu/trgt-denovo trio --reference ${reference_genome}\
+     --bed ${bed_tr_file}
+     --father ${genotype_TRGT_vcfs[1][1]} \
+     --mother ${genotype_TRGT_vcfs[2][1]} \
+     --child ${genotype_TRGT_vcfs[0][1]} \
      --out trgt_denovo_report.tsv
 
      """
@@ -233,21 +233,24 @@ workflow {
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
-    sorted_genotypes=genotype_strkit.out.vcf_compressed.toSortedList { a, b -> a[0] <=> b[0] }.view()
     genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_fai,bgzip_index_fasta.out.fasta_gzi)
     
-    genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" }  
+    genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
+    sorted_genotypes=genotype_str_vcf_gz.toSortedList { a, b -> a[0] <=> b[0] }.view() { it -> "Sorted Genotyped VCF files: ${it}" }
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
 
     genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
+    genotype_TRGT_bams = genotype_TRGT.out.spanning_bam.collect()
+
     genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    //genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    //genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
-    //genotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
+    genotype_TRGT_bams.view { it -> "BAM files TRGT: ${it}" }
+    genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
+    genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
+    genotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
 
    
-    //genotype_TRGT_bams = genotype_TRGT.out.spanning_bam.collect()
+    
    
     //genotype_STR_bams_trgt = genotype_TRGT_bams.map { it[0] }.view { it -> "Spanning BAM files: ${it}" }
     //genotype_STR_bams_sorted_trgt = genotype_TRGT_bams.map { it[1] }.view { it -> "Spanning Sorted BAM files: ${it}" }
