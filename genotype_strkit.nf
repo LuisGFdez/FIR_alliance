@@ -31,7 +31,7 @@ process bgzip_index_fasta {
     echo "Compressing reference genome with bgzip ${reference_genome}"
     bgzip -@ ${task.cpus} ${reference_genome}
     echo "Compressing reference genome with faidx --gzi ${reference_genome}"
-    samtools faidx --gzi-idx ${reference_genome}.gz
+    samtools faidx ${reference_genome}.gz
     """
 }
 
@@ -109,8 +109,8 @@ process genotype_TRGT {
         path reference_genome_index
         path reference_genome_gzi_index
     output:
-        tuple path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
-        tuple path("${input_bam.simpleName}.spanning.bam"), path("${input_bam.simpleName}.spanning.sorted.bam"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), emit: spanning_bam
+        tuple path("${input_bam.simpleName}_trgt_genotypes.vcf.gz") , path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
+        tuple path("${input_bam.simpleName}.spanning.bam"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), emit: spanning_bam
     
     script:
     """
@@ -124,8 +124,8 @@ process genotype_TRGT {
     bcftools sort -Oz -o ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz ${input_bam.simpleName}_trgt_genotypes.vcf.gz
     bcftools index ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
 
-    samtools sort -o ${input_bam.simpleName}.spanning.sorted.bam ${input_bam.simpleName}.spanning.bam
-    samtools index ${input_bam.simpleName}.spanning.sorted.bam
+    samtools sort -o ${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam ${input_bam.simpleName}_trgt_genotypes.spanning.bam
+    samtools index ${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam
     """
 
 }
@@ -213,7 +213,7 @@ workflow {
     bed_tr_file = Channel.value(file(params.bed_file))
     snp_files   = Channel.value(file(params.snps_vcf))
     snps_index  = Channel.value(file(params.snps_vcf_index))
-    reference_genome = Channel.fromPath(params.reference_genome)
+    reference_genome = Channel.value(file(params.reference_genome))
 
     //bed_tr_file = Channel.fromPath(params.bed_file)
     bed_tr_file_trgt = Channel.value(file(params.bed_file_trgt))             
