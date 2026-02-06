@@ -237,7 +237,8 @@ workflow {
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
-    sorted_genotypes=genotype_str_vcf_gz.toSortedList { a, b -> a[0] <=> b[0] }.view() { it -> "Sorted Genotyped VCF files: ${it}" }
+    sorted_genotypes=genotype_str_vcf_gz.toSortedList { a, b -> a[0] <=> b[0] }
+    sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
 
     genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
@@ -245,9 +246,10 @@ workflow {
 
     genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
     genotype_TRGT_bams.view { it -> "BAM files TRGT: ${it}" }
-    genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
-    genotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
+    
+    //genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
+    //genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
+    g//enotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
 
    
     
