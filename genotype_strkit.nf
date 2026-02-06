@@ -110,7 +110,7 @@ process genotype_TRGT {
         path reference_genome_gzi_index
     output:
         tuple path("${input_bam.simpleName}_trgt_genotypes.vcf.gz") , path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
-        tuple path("${input_bam.simpleName}.spanning.bam"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), path("${input_bam.simpleName}.spanning.sorted.bam.bai"), emit: spanning_bam
+        tuple path("${input_bam.simpleName}_trgt_genotypes.spanning.bam"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam.bai"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
     
     script:
     """
