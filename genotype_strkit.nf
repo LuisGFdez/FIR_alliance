@@ -237,19 +237,42 @@ workflow {
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
-    sorted_genotypes=genotype_str_vcf_gz.toSortedList { a, b -> a[0] <=> b[0] }
-    sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
+
+    sorted_genotypes = genotype_str_vcf_gz.toSortedList { a, b ->
+    def na = (a.name =~ /-(\d+)_/)[0][1].toInteger()
+    def nb = (b.name =~ /-(\d+)_/)[0][1].toInteger()
+    na <=> nb }
+    sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
+
+   
 
     genotype_TRGT_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
     genotype_TRGT_bams = genotype_TRGT.out.spanning_bam.collect()
+    genotype_TRGT_vcfs.map { vcf_path ->
+            def parent_dir = vcf_path.getParent().getName()
+            def tag = parent_dir.tokenize('.')[0]
+            tuple(tag, vcf_path)
+        }
+        .groupTuple()
+        .map { tag, vcf_list -> tuple(tag, vcf_list) }
+    genotype_TRGT_vcfs.set {grouped_trgt_vcfs}
+    grouped_trgt_vcfs.view() { it -> "Genotyped TRGT VCF files: ${it}" }
+    genotype_TRGT_bams.map { bam_path ->
+            def parent_dir = bam_path.getParent().getName()
+            def tag = parent_dir.tokenize('.')[0]
+            tuple(tag, bam_path)
+        }
+        .groupTuple()
+        .map { tag, bam_list -> tuple(tag, bam_list) }
+    genotype_TRGT_bams.set {grouped_trgt_bams}
+    grouped_trgt_bams.view(){ it -> "BAM files TRGT: ${it}" }
+    //genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
+    //genotype_TRGT_bams.view { it -> "BAM files TRGT: ${it}" }
 
-    genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    genotype_TRGT_bams.view { it -> "BAM files TRGT: ${it}" }
-    
     //genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
     //genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
-    g//enotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
+    //enotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
 
    
     
