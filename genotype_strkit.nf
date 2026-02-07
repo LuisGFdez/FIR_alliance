@@ -247,29 +247,44 @@ workflow {
 
    
 
-    flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
-    flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect()
-    //flattened_trgt_vcfs = genotype_TRGT_vcfs.flatten()  // if collect() returned nested lists
+    // ---------------------------------------------
+// Collect TRGT outputs
+// ---------------------------------------------
+    flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect().flatten()
+    flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect().flatten()
 
-    grouped_trgt_vcfs = flattened_trgt_vcfs
-    .findAll { it.name.endsWith('_sorted.vcf.gz') }  // ignore .csi or unsorted
+// ---------------------------------------------
+// Convert lists back to channels
+// --------------------------------------------
+    trgt_vcfs_ch = Channel.fromList(flattened_trgt_vcfs)
+    trgt_bams_ch = Channel.fromList(flattened_trgt_bams)
+
+// ---------------------------------------------
+// Process VCFs: filter, tag, group, sort
+// ---------------------------------------------
+    grouped_trgt_vcfs = trgt_vcfs_ch
+    .filter { it.name.endsWith('_sorted.vcf.gz') }          // keep only sorted VCFs
     .map { path ->
-        def tag = (path.name =~ /cmh\d{6}-\d+/)[0]  // sample ID like cmh002019-01
+        def tag = (path.name =~ /cmh\d{6}-\d+/)[0]         // sample ID like cmh002019-01
         tuple(tag, path)
     }
-    .groupTuple()
-    .map { tag, files -> tuple(tag, files.sort { it.name }) }
+    .groupTuple()                                           // group by tag
+    .map { tag, files -> tuple(tag, files.sort { it.name }) }  // sort files within each group
 
     grouped_trgt_vcfs.view { "Grouped TRGT VCFs: $it" }
 
-    grouped_trgt_bams = flattened_trgt_bams
-    .findAll { it.name.endsWith('.sorted.bam') }  // ignore .bai or unsorted
+// ---------------------------------------------
+// Process BAMs: filter, tag, group, sort
+// ---------------------------------------------
+    grouped_trgt_bams = trgt_bams_ch
+    .filter { it.name.endsWith('.sorted.bam') }            // ignore .bai or unsorted
     .map { path ->
-        def tag = (path.name =~ /cmh\d{6}-\d+/)[0]  // sample ID like cmh002019-01
+        def tag = (path.name =~ /cmh\d{6}-\d+/)[0]         // sample ID like cmh002019-01
         tuple(tag, path)
     }
     .groupTuple()
     .map { tag, files -> tuple(tag, files.sort { it.name }) }
+
     grouped_trgt_bams.view { "Grouped TRGT BAMs: $it" }
 
     //genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
