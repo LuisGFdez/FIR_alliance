@@ -235,10 +235,10 @@ workflow {
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_fai,bgzip_index_fasta.out.fasta_gzi)
     
-    genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" } 
+    genotype_str_vcf=genotype_strkit.out.vcf_output.collect().view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
-    flat_vcfs = genotype_str_vcf_gz.flatten()
+    flat_vcfs = genotype_str_vcf_gz.flatten().view { it -> "flattened VCF GZ files: ${it}" }
     sorted_genotypes = flat_vcfs.toSortedList { a, b ->
     def na = (a.name =~ /-(\d+)_/)[0][1].toInteger()
     def nb = (b.name =~ /-(\d+)_/)[0][1].toInteger()
