@@ -247,9 +247,9 @@ workflow {
 
    
 
-    flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.flatten()
-    flattened_trgt_bams = genotype_TRGT.out.spanning_bam.flatten()
-    flattened_trgt_vcfs = genotype_TRGT_vcfs.flatten()  // if collect() returned nested lists
+    flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect()
+    flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect()
+    //flattened_trgt_vcfs = genotype_TRGT_vcfs.flatten()  // if collect() returned nested lists
 
     grouped_trgt_vcfs = flattened_trgt_vcfs
     .findAll { it.name.endsWith('_sorted.vcf.gz') }  // ignore .csi or unsorted
