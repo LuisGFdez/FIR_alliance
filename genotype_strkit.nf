@@ -9,6 +9,7 @@ params.bed_file_trgt = "/tr_bed_files/hg38_ver6_trgt.sorted.bed"
 params.snps_vcf="/strkit_int_files/00-All.vcf.gz"
 params.snps_vcf_index="/strkit_int_files/00-ll.vcf.gz.tbi"
 params.reference_genome = "/cvmfs/ref.mugqic/genomes/species/Homo_sapiens.GRCh38/genome/Homo_sapiens.GRCh38.fa"
+params.reference_genome_index= "/cvmfs/ref.mugqic/genomes/species/Homo_sapiens.GRCh38/genome/Homo_sapiens.GRCh38.fa.fai"
 params.outdir    = "results_vcf"
 params.outdir_fastas="fasta_int_file"
 params.outdir_bams="bam_int_files"
@@ -21,13 +22,10 @@ process bgzip_index_fasta {
         path reference_genome
     output:
         path "${reference_genome}.gz", emit: fasta_gz
-        path "${reference_genome}.fai", emit: fasta_fai
+        path "${reference_genome}.gz.fai", emit: fasta_fai
         path "${reference_genome}.gz.gzi", emit: fasta_gzi
     script:
     """
-    echo "Compressing reference genome with faidx ${reference_genome}"
-    samtools faidx ${reference_genome}
-
     echo "Compressing reference genome with bgzip ${reference_genome}"
     bgzip -@ ${task.cpus} ${reference_genome}
     echo "Compressing reference genome with faidx --gzi ${reference_genome}"
