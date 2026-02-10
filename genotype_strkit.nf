@@ -115,7 +115,7 @@ process genotype_TRGT {
     script:
     """
     echo "Genotyping with TRGT for BAM: ${input_bam}"       
-    /home/luisluna/scratch/trgt-v5.0.0-x86_64-unknown-linux-gnu/trgt genotype --genome ${reference_genome} \
+    trgt genotype --genome ${reference_genome} \
     --repeats ${bed_tr_file} \
     --reads ${input_bam} \
     --output-prefix ${input_bam.simpleName}_trgt_genotypes \
@@ -183,7 +183,7 @@ process targt_denovo {
      """
      echo "Performing De Novo Mutation Detection on VCF files: ${genotype_trgt_vcf.join(', ')}"
 
-     /home/luisluna/scratch/trgt-denovo-v0.3.0-x86_64-unknown-linux-gnu/trgt-denovo trio --reference ${reference_genome}\
+     trgt-denovo trio --reference ${reference_genome}\
      --bed ${bed_tr_file}
      --father ${genotype_TRGT_vcfs[1][1]} \
      --mother ${genotype_TRGT_vcfs[2][1]} \
