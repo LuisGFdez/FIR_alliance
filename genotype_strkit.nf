@@ -3,11 +3,11 @@
 /*
  * Pipeline parameters
  */
-params.bed_file = "/home/luisluna/gentotype_ga4k_strkit/strkit_files/hg38_ver6_modified.sorted.bed"
-params.bed_file_trgt = "/home/luisluna/scratch/hg38_ver6_modified.sorted.bed"
+params.bed_file = "/tr_bed_files/hg38_ver6_strkit.sorted.bed"
+params.bed_file_trgt = "/tr_bed_files/hg38_ver6_trgt.sorted.bed"
 
-params.snps_vcf="/home/luisluna/scratch/genotype_ga4k_strkit/strkit_int_files/00-common_all.vcf.gz"
-params.snps_vcf_index="/home/luisluna/scratch/genotype_ga4k_strkit/strkit_int_files/00-common_all.vcf.gz.tbi"
+params.snps_vcf="/strkit_int_files/00-All.vcf.gz"
+params.snps_vcf_index="/strkit_int_files/00-ll.vcf.gz.tbi"
 params.reference_genome = "/cvmfs/ref.mugqic/genomes/species/Homo_sapiens.GRCh38/genome/Homo_sapiens.GRCh38.fa"
 params.outdir    = "results_vcf"
 params.outdir_fastas="fasta_int_file"
@@ -197,7 +197,7 @@ process targt_denovo {
  * Workflow definition
  */
 workflow {
-    merge_bams_files = Channel.fromPath('/project/6007512/wcheung/pacbio/aligned2/cmh002019*/*.bam')
+    merge_bams_files = Channel.fromPath("/project/6007512/shared/C3G/projects/ga4k_from_cedar/pacbio/aligned2/cmh002019*/*.bam")
         .map { bam_path ->
             def parent_dir = bam_path.getParent().getName()
             def tag = parent_dir.tokenize('.')[0]
@@ -215,7 +215,6 @@ workflow {
     snps_index  = Channel.value(file(params.snps_vcf_index))
     reference_genome = Channel.value(file(params.reference_genome))
 
-    //bed_tr_file = Channel.fromPath(params.bed_file)
     bed_tr_file_trgt = Channel.value(file(params.bed_file_trgt))             
                         // .view { it -> "bed_tr_file: ${it}" } 
     //reference_genome=Channel.fromPath(params.reference_genome)
@@ -245,63 +244,13 @@ workflow {
     na <=> nb }
     sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
 
-   
 
-    // ---------------------------------------------
-// Collect TRGT outputs
-// ---------------------------------------------
     flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect().flatten().view { it -> "Genotyped TRGT VCF files: ${it}" }
     flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect().flatten().view { it -> "Spanning BAM files: ${it}" } 
 
-// // ---------------------------------------------
-// // Convert lists back to channels
-// // --------------------------------------------
-//     trgt_vcfs_ch = Channel.fromList(flattened_trgt_vcfs)
-//     trgt_bams_ch = Channel.fromList(flattened_trgt_bams)
 
-// // ---------------------------------------------
-// // Process VCFs: filter, tag, group, sort
-// // ---------------------------------------------
-//     grouped_trgt_vcfs = trgt_vcfs_ch
-//     .filter { it.name.endsWith('_sorted.vcf.gz') }          // keep only sorted VCFs
-//     .map { path ->
-//         def tag = (path.name =~ /cmh\d{6}-\d+/)[0]         // sample ID like cmh002019-01
-//         tuple(tag, path)
-//     }
-//     .groupTuple()                                           // group by tag
-//     .map { tag, files -> tuple(tag, files.sort { it.name }) }  // sort files within each group
 
-//     grouped_trgt_vcfs.view { "Grouped TRGT VCFs: $it" }
-
-// // ---------------------------------------------
-// // Process BAMs: filter, tag, group, sort
-// // ---------------------------------------------
-//     grouped_trgt_bams = trgt_bams_ch
-//     .filter { it.name.endsWith('.sorted.bam') }            // ignore .bai or unsorted
-//     .map { path ->
-//         def tag = (path.name =~ /cmh\d{6}-\d+/)[0]         // sample ID like cmh002019-01
-//         tuple(tag, path)
-//     }
-//     .groupTuple()
-//     .map { tag, files -> tuple(tag, files.sort { it.name }) }
-
-//     grouped_trgt_bams.view { "Grouped TRGT BAMs: $it" }
-
-    //genotype_TRGT_vcfs.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    //genotype_TRGT_bams.view { it -> "BAM files TRGT: ${it}" }
-
-    //genotype_str_vcf_trgt = genotype_TRGT_vcfs.map { it[0] }.view { it -> "Genotyped TRGT VCF files: ${it}" }
-    //genotype_str_vcf_gz_trgt = genotype_TRGT_vcfs.map { it[1] }.view { it -> "Genotyped TRGT VCF GZ files: ${it}" }
-    //enotype_str_vcf_csi_trgt = genotype_TRGT_vcfs.map { it[2] }.view { it -> "Genotyped TRGT VCF CSI files: ${it}" }
-
-   
-    
-   
-    //genotype_STR_bams_trgt = genotype_TRGT_bams.map { it[0] }.view { it -> "Spanning BAM files: ${it}" }
-    //genotype_STR_bams_sorted_trgt = genotype_TRGT_bams.map { it[1] }.view { it -> "Spanning Sorted BAM files: ${it}" }
-    //genotype_STR_bams_index_trgt = genotype_TRGT_bams.map { it[2] }.view { it -> "Spanning BAM Index files: ${it}" }
-
-    mendelian_inheritance(genotype_str_vcf,genotype_str_vcf_gz,genotype_str_vcf_csi)
+    mendelian_inheritance(sorted_genotypes,genotype_str_vcf_gz,genotype_str_vcf_csi)
 
     //targt_denovo(bgzip_index_fasta.out[0].first(), bed_tr_file.first(),genotype_TRGT_vcfs,genotype_TRGT_bams)
 
