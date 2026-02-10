@@ -103,8 +103,8 @@ process genotype_TRGT {
         tuple path (input_bam), path (input_bam_index)
         path bed_tr_file
         path reference_genome
-        path reference_genome_gz
         path reference_genome_index
+        path reference_genome_gz
         path reference_genome_gzi_index
     output:
         tuple path("${input_bam.simpleName}_trgt_genotypes.vcf.gz") , path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
@@ -212,6 +212,7 @@ workflow {
     snp_files   = Channel.value(file(params.snps_vcf))
     snps_index  = Channel.value(file(params.snps_vcf_index))
     reference_genome = Channel.value(file(params.reference_genome))
+    reference_genome_index = Channel.value(file(params.reference_genome_index))
 
     bed_tr_file_trgt = Channel.value(file(params.bed_file_trgt))             
                         // .view { it -> "bed_tr_file: ${it}" } 
@@ -230,7 +231,7 @@ workflow {
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
-    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_fai,bgzip_index_fasta.out.fasta_gzi)
+    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect().view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
