@@ -231,7 +231,7 @@ workflow {
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
-    //genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
+    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect().view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
@@ -243,10 +243,75 @@ workflow {
     na <=> nb }
     sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
 
-
-    //flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect().flatten().view { it -> "Genotyped TRGT VCF files: ${it}" }
-    //flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect().flatten().view { it -> "Spanning BAM files: ${it}" } 
-
+    genotype_TRGT.out.vcf_file_trgt.flatten().map {file ->
+                                                          def sample = (file.name =~ /^(cmh\d+-\d+)/)[0][1]
+                                                          tuple(sample, file)
+                                                          }
+                                              .groupTuple()
+                                              .toSortedList { a, b -> a[0] <=> b[0] }
+                                              //.flatten()
+                                              //.buffer(size:2)
+                                              .map { sorted_list ->
+                                                      def samples = sorted_list.collect { it[0] }   // [cmh002019-01, cmh002019-02, cmh002019-03]
+                                                      def files   = sorted_list.collect { it[1] }   // [[files01], [files02], [files03]]
+                                                      tuple(samples, files)
+                                                   }
+                                                      // group all 3 files per sample
+                                              .set{group_trgt_vcfs}
+    // Reshape channel to include both sorted vcf AND its index
+    group_trgt_vcfs
+        .map { sample_ids, file_groups ->
+        def child  = file_groups[0]   // [merged.vcf.gz, sorted.vcf.gz, sorted.vcf.gz.csi]
+        def father = file_groups[1]
+        def mother = file_groups[2]
+        tuple(
+            sample_ids,
+            child[1],    // child sorted vcf
+            child[2],    // child index .csi
+            father[1],   // father sorted vcf
+            father[2],   // father index .csi
+            mother[1],   // mother sorted vcf
+            mother[2]    // mother index .csi
+        )
+    }
+    .set { trio_vcfs }
+    trio_vcfs.view()                                                 //.view { sample, files -> "Sample: $sample\n  Files: $files" }
+   // group_trgt_vcfs.view()
+   trio_vcfs.view{it->"Group VCF files: ${it[0][1]}"}
+   trio_vcfs.view{it->"Group VCF files: ${it[0]}"}
+   genotype_TRGT.out.spanning_bam.flatten().map { file ->
+                                                          def sample = (file.name =~ /^(cmh\d+-\d+)/)[0][1]
+                                                          tuple(sample, file)
+                                                          }
+                                              .groupTuple()
+                                              .toSortedList { a, b -> a[0] <=> b[0] }
+                                              .map { sorted_list ->
+                                                      def samples = sorted_list.collect { it[0] }   // [cmh002019-01, cmh002019-02, cmh002019-03]
+                                                      def files   = sorted_list.collect { it[1] }   // [[files01], [files02], [files03]]
+                                                      tuple(samples, files)
+                                                   }
+                                              .set{group_trgt_bams} 
+    group_trgt_bams.map { sample_ids, file_groups ->
+        def child  = file_groups[0]   // [merged.vcf.gz, sorted.vcf.gz, sorted.vcf.gz.csi]
+        def father = file_groups[1]
+        def mother = file_groups[2]
+        tuple(
+            sample_ids,
+            child[0],    // child spanning bam
+            child[1],    // child spanning bam index
+            child[2],    // child spanning bam index
+            father[0],   // father spanning bam
+            father[1],   // father spanning bam index
+            father[2],   // father spanning bam index
+            mother[0],   // mother spanning bam
+            mother[1],   // mother spanning bam index
+            mother[2]    // mother spanning bam index
+        )
+    }
+    .set { trio_bams }
+    trio_bams.view{it->"Group BAM files: ${it[0]}"}
+    trio_bams.view{it->"Group BAM files: ${it[1]}"} 
+    
 
 
     mendelian_inheritance(genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
