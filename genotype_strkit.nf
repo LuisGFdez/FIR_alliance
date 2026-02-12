@@ -3,11 +3,11 @@
 /*
  * Pipeline parameters
  */
-params.bed_file = "/tr_bed_files/hg38_ver6_strkit.sorted.bed"
-params.bed_file_trgt = "/tr_bed_files/hg38_ver6_trgt.sorted.bed"
+params.bed_file = "tr_bed_files/hg38_ver6_strkit.sorted.bed"
+params.bed_file_trgt = "tr_bed_files/hg38_ver6_trgt.sorted.bed"
 
-params.snps_vcf="/strkit_int_files/00-All.vcf.gz"
-params.snps_vcf_index="/strkit_int_files/00-ll.vcf.gz.tbi"
+params.snps_vcf="strkit_int_files/00-All.vcf.gz"
+params.snps_vcf_index="strkit_int_files/00-All.vcf.gz.tbi"
 params.reference_genome = "/cvmfs/ref.mugqic/genomes/species/Homo_sapiens.GRCh38/genome/Homo_sapiens.GRCh38.fa"
 params.reference_genome_index= "/cvmfs/ref.mugqic/genomes/species/Homo_sapiens.GRCh38/genome/Homo_sapiens.GRCh38.fa.fai"
 params.outdir    = "results_vcf"
@@ -231,7 +231,7 @@ workflow {
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
-    genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
+    //genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
     
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect().view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
@@ -244,8 +244,8 @@ workflow {
     sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
 
 
-    flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect().flatten().view { it -> "Genotyped TRGT VCF files: ${it}" }
-    flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect().flatten().view { it -> "Spanning BAM files: ${it}" } 
+    //flattened_trgt_vcfs = genotype_TRGT.out.vcf_file_trgt.collect().flatten().view { it -> "Genotyped TRGT VCF files: ${it}" }
+    //flattened_trgt_bams = genotype_TRGT.out.spanning_bam.collect().flatten().view { it -> "Spanning BAM files: ${it}" } 
 
 
 
