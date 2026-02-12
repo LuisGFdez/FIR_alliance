@@ -113,7 +113,7 @@ process genotype_TRGT {
     script:
     """
     echo "Genotyping with TRGT for BAM: ${input_bam}"       
-    trgt-v5.0.0-x86_64-unknown-linux-gnu/trgt genotype --genome ${reference_genome} \
+    /home/luisluna/links/scratch/genotype_GA4K_strs_strkit/trgt-v5.0.0-x86_64-unknown-linux-gnu/trgt genotype --genome ${reference_genome} \
     --repeats ${bed_tr_file} \
     --reads ${input_bam} \
     --output-prefix ${input_bam.simpleName}_trgt_genotypes \
@@ -170,8 +170,8 @@ process targt_denovo {
     input:
          path reference_genome
          path bed_tr_file
-         tuple path (genotype_TRGT_vcfs)
-         tuple path (genotype_TRGT_bams)
+         tuple val(sample_id_vcf) , path (genotype_TRGT_vcfs)
+         tuple val(sample_id_bam) , path (genotype_TRGT_bams)
 
     output:
          path "trgt_denovo_report.tsv", emit: trgt_denovo_report
@@ -179,13 +179,18 @@ process targt_denovo {
      script:
 
      """
-     echo "Performing De Novo Mutation Detection on VCF files: ${genotype_trgt_vcf.join(', ')}"
-
-     trgt-denovo-v0.3.0-x86_64-unknown-linux-gnu/trgt-denovo trio --reference ${reference_genome}\
+     echo "Performing De Novo Mutation Detection on VCF files: ${genotype_TRGT_vcfs.join(', ')}"
+     echo "Reference genome: ${reference_genome}"
+     echo "BED file: ${bed_tr_file}"
+     echo "Sample IDs: ${sample_id_vcf.join(', ')}"
+     echo "child VCF: ${sample_id_vcf[0]}"
+     echo "father VCF: ${sample_id_vcf[1]}"
+     echo "mother VCF: ${sample_id_vcf[2]}"
+     /home/luisluna/links/scratch/genotype_GA4K_strs_strkit/trgt-denovo-v0.3.0-x86_64-unknown-linux-gnu/trgt-denovo trio --reference ${reference_genome}\
      --bed ${bed_tr_file}
-     --father ${genotype_TRGT_vcfs[1][1]} \
-     --mother ${genotype_TRGT_vcfs[2][1]} \
-     --child ${genotype_TRGT_vcfs[0][1]} \
+     --father ${sample_id_vcf[2]} \
+     --mother ${sample_id_vcf[1]} \
+     --child ${sample_id_vcf[0]} \
      --out trgt_denovo_report.tsv
 
      """
@@ -275,7 +280,7 @@ workflow {
         )
     }
     .set { trio_vcfs }
-    trio_vcfs.view()                                                 //.view { sample, files -> "Sample: $sample\n  Files: $files" }
+   trio_vcfs.view()                                                 //.view { sample, files -> "Sample: $sample\n  Files: $files" }
    // group_trgt_vcfs.view()
    trio_vcfs.view{it->"Group VCF files: ${it[0][1]}"}
    trio_vcfs.view{it->"Group VCF files: ${it[0]}"}
@@ -290,6 +295,7 @@ workflow {
                                                       def files   = sorted_list.collect { it[1] }   // [[files01], [files02], [files03]]
                                                       tuple(samples, files)
                                                    }
+                                                      // group all 3 files per sample
                                               .set{group_trgt_bams} 
     group_trgt_bams.map { sample_ids, file_groups ->
         def child  = file_groups[0]   // [merged.vcf.gz, sorted.vcf.gz, sorted.vcf.gz.csi]
@@ -316,7 +322,7 @@ workflow {
 
     mendelian_inheritance(genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
-    //targt_denovo(bgzip_index_fasta.out[0].first(), bed_tr_file.first(),genotype_TRGT_vcfs,genotype_TRGT_bams)
+    targt_denovo(reference_genome, bed_tr_file_trgt,trio_vcfs,trio_bams)
 
 }    
 //nextflow clean $(nextflow log -q) -f
