@@ -28,11 +28,33 @@ process bgzip_index_fasta {
     """
     echo "Compressing reference genome with bgzip ${reference_genome}"
     bgzip -@ ${task.cpus} ${reference_genome}
-    echo "Compressing reference genome with faidx ${reference_genome}"
-    samtools faidx -@ ${task.cpus} ${reference_genome}.gz
+    echo "Compressing reference genome with faidx --gzi ${reference_genome}"
+    samtools faidx ${reference_genome}.gz
     """
 }
 
+process merge_bams {
+
+    publishDir params.outdir_bams, mode: 'symlink'
+    //scratch true
+
+    tag { tag }
+
+    input:
+        tuple val(tag), path(bam_files)
+    output:
+        //path "${tag}_merged.bam", emit: merge_bam
+        tuple path("${tag}_merged.bam"), path("${tag}_merged.bam.bai"), emit: merge_bam
+        //path "${tag}_merged.bam.bai", emit: merge_bam_index
+
+    script:
+    """
+    echo "Using tag: ${tag}"
+    echo "Merging BAM files: ${bam_files.join(', ')}"
+    samtools merge -@ ${task.cpus} ${tag}_merged.bam ${bam_files.join(' ')}
+    samtools index -@ ${task.cpus} ${tag}_merged.bam
+    """
+}
 
 process genotype_strkit {
 
