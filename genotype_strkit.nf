@@ -36,7 +36,7 @@ process bgzip_index_fasta {
 process merge_bams {
 
     publishDir params.outdir_bams, mode: 'symlink'
-    //scratch true
+    scratch true
 
     tag { tag }
 
@@ -249,7 +249,7 @@ workflow {
 
 
 
-    mendelian_inheritance(sorted_genotypes,genotype_str_vcf_gz,genotype_str_vcf_csi)
+    mendelian_inheritance(genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
     //targt_denovo(bgzip_index_fasta.out[0].first(), bed_tr_file.first(),genotype_TRGT_vcfs,genotype_TRGT_bams)
 
