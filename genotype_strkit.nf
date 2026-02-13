@@ -170,8 +170,8 @@ process targt_denovo {
     input:
          path reference_genom
          path bed_tr_file
-         tuple val(sample_id_vcf) , path (genotype_TRGT_vcfs)
-         tuple val(sample_id_bam) , path (genotype_TRGT_bams)
+         tuple path(child_files), path(father_files), path(mother_files)
+         tuple path(child_bams), path(father_bams), path(mother_bams)
 
     output:
          path "trgt_denovo_report.tsv", emit: trgt_denovo_report
@@ -182,15 +182,14 @@ process targt_denovo {
      echo "Performing De Novo Mutation Detection on VCF files: ${genotype_TRGT_vcfs.join(', ')}"
      echo "Reference genome: ${reference_genome}"
      echo "BED file: ${bed_tr_file}"
-     echo "Sample IDs: ${sample_id_vcf.join(', ')}"
-     echo "child VCF: ${sample_id_vcf[0]}"
-     echo "father VCF: ${sample_id_vcf[1]}"
-     echo "mother VCF: ${sample_id_vcf[2]}"
+     echo "child VCF: ${child_files[1]}"
+     echo "father VCF: ${father_files[1]}"
+     echo "mother VCF: ${mother_files[1]}"
      /home/luisluna/links/scratch/genotype_GA4K_strs_strkit/trgt-denovo-v0.3.0-x86_64-unknown-linux-gnu/trgt-denovo trio --reference ${reference_genome}\
      --bed ${bed_tr_file}
-     --father ${sample_id_vcf[2]} \
-     --mother ${sample_id_vcf[1]} \
-     --child ${sample_id_vcf[0]} \
+     --father-vcf ${father_files[1]} \
+     --mother-vcf ${mother_files[1]} \
+     --child-vcf ${child_files[1]} \
      --out trgt_denovo_report.tsv
 
      """
@@ -248,39 +247,49 @@ workflow {
     na <=> nb }
     sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
 
-    genotype_TRGT.out.vcf_file_trgt.flatten().map {file ->
-                                                          def sample = (file.name =~ /^(.+?)\.vcf/)[0][1]
-                                                          tuple(sample, file)
-                                                          }
-                                              .groupTuple()
-                                              .toSortedList { a, b -> a[0] <=> b[0] }
-                                              .flatten()
-                                              .buffer(size:3)
-                                              .set{trio_vcfs}
-                                            
-   trio_vcfs
-    .collect()
-    .set { all_vcfs }
-   all_vcfs.view { it -> "All TRGT VCF files: ${it}" }
-   genotype_TRGT.out.spanning_bam.flatten().map { file ->
-                                                          def sample = (file.name =~ /^(.+?)\.bam/)[0][1]
+   genotype_TRGT.out.vcf_file_trgt
+    .flatten()
+    .map { file ->
+        def sample = (file.name =~ /^(.+?)_merged/)[0][1]
+        tuple(sample, file)
+    }
+    .groupTuple()                                   // [sample_id, [file1, file2, file3]]
+    .toSortedList { a, b -> a[0] <=> b[0] }         // [[s1, [files]], [s2, [files]], [s3, [files]]]
+    .map { sorted ->
+        sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
+    }                                               // [[files01], [files02], [files03]]
+    .set { trio_vcfs }
+
+   trio_vcfs.view() { it -> "All TRGT VCF files: ${it}" }
+   genotype_TRGT.out.spanning_bam.flatten()
+                                                .map { file ->
+                                                          def sample = (file.name =~ /^(.+?)_merged/)[0][1]
                                                           tuple(sample, file)
                                                           }
                                                 .groupTuple()
                                                 .toSortedList { a, b -> a[0] <=> b[0] }
-                                                .flatten()                        
-                                                .buffer(size:3)      
-                                                .set{trio_bams} 
-    trio_bams
-    .collect()
-    .set { all_bams }
-   all_bams.view { it -> "All TRGT BAM files: ${it}" }
+                                                .map { sorted ->
+                                                    sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
+                                                }
+                                                .set{trio_spanning_bams}
+   trio_spanning_bams.view() { it -> "All TRGT spanning BAM files: ${it}" }                                            
+   genotype_TRGT.out.spanning_bam.flatten().map { file ->
+                                                          def sample = (file.name =~ /^(.+?)_merged/)[0][1]
+                                                          tuple(sample, file)
+                                                          }
+                                                .groupTuple()
+                                                .toSortedList { a, b -> a[0] <=> b[0] }
+                                                .map { sorted ->
+                                                    sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
+                                                }
+                                                .set{trio_bams}
+   trio_bams.view { it -> "All TRGT BAM files: ${it}" }
     
 
 
     mendelian_inheritance(genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
-    //targt_denovo(reference_genome, bed_tr_file_trgt,all_vcfs,all_bams)
+    targt_denovo(reference_genome, bed_tr_file_trgt,trio_vcfs,trio_bams)
 
 }    
 //nextflow clean $(nextflow log -q) -f
