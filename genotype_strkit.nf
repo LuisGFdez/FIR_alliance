@@ -212,9 +212,10 @@ workflow {
             def family_id = sample_id.tokenize('-')[0..1].join('-') // e.g. UNMC-0034
             tuple(family_id, sample_id, bam_path)
         }
-        .groupTuple()
-        .set { grouped_bams }
+        .groupTuple(by:1)
         .view { it -> "Grouped BAM files by family: ${it}" }
+        .set { grouped_bams }
+        
 
     // To use in merge_bams process:
 
