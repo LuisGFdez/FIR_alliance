@@ -51,8 +51,13 @@ process merge_bams {
     """
     echo "Using sample_id: ${sample_id}"
     echo "Merging BAM files: ${bam_files.join(', ')}"
-    samtools merge -@ ${task.cpus} ${sample_id}_merged.bam ${bam_files.join(' ')}
-    samtools index -@ ${task.cpus} ${sample_id}_merged.bam
+
+    if [ \$(echo "${bam_files}" | wc -w) -eq 1 ]; then
+        samtools view -o ${sample_id}_merged.bam ${bam_files}
+    else
+        samtools merge -@ ${task.cpus} ${sample_id}_merged.bam ${bam_files.join(' ')}
+    fi
+        samtools index -@ ${task.cpus} ${sample_id}_merged.bam
     """
 }
 
@@ -213,6 +218,9 @@ workflow {
             tuple(family_id, sample_id, bam_path)
         }
         .groupTuple(by:1)
+        .map { family_id_list, sample_id, bam_list ->
+        tuple(family_id_list[0], sample_id, bam_list)  // take first element of family_id list
+    }
         .view { it -> "Grouped BAM files by family: ${it}" }
         .set { grouped_bams }
         
@@ -240,6 +248,9 @@ workflow {
     //merged.merge_bam.view { it -> "Merged BAM: ${it}" }
    
     merged.merge_bam.view()
+    family_ids = merged.merge_bam.map { family_id, sample_id, bam, bai ->
+    family_id
+     }.unique()
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
@@ -280,10 +291,6 @@ workflow {
                                                 .set{trio_bams}
     trio_bams.view { it -> "All TRGT BAM files: ${it}" }
     
-    merged.map { family_id, sample_id, bam_files ->
-        tuple(family_id)}
-        .unique()
-        .set { family_ids }
 
     mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
