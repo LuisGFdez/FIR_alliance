@@ -35,35 +35,35 @@ process bgzip_index_fasta {
 
 process merge_bams {
 
-    publishDir params.outdir_bams, mode: 'symlink'
+    publishDir "${params.outdir_bams}/${family_id}", mode: 'symlink'
     scratch true
 
-    tag { tag }
+    tag "$sample_id" 
 
     input:
-        tuple val(tag), path(bam_files)
+        tuple val(family_id), val(sample_id), path(bam_files)
     output:
         //path "${tag}_merged.bam", emit: merge_bam
-        tuple path("${tag}_merged.bam"), path("${tag}_merged.bam.bai"), emit: merge_bam
+        tuple val(family_id), val(sample_id), path("${sample_id}_merged.bam"), path("${sample_id}_merged.bam.bai"), emit: merge_bam
         //path "${tag}_merged.bam.bai", emit: merge_bam_index
 
     script:
     """
-    echo "Using tag: ${tag}"
+    echo "Using sample_id: ${sample_id}"
     echo "Merging BAM files: ${bam_files.join(', ')}"
-    samtools merge -@ ${task.cpus} ${tag}_merged.bam ${bam_files.join(' ')}
-    samtools index -@ ${task.cpus} ${tag}_merged.bam
+    samtools merge -@ ${task.cpus} ${sample_id}_merged.bam ${bam_files.join(' ')}
+    samtools index -@ ${task.cpus} ${sample_id}_merged.bam
     """
 }
 
 process genotype_strkit {
 
-    tag {input_bam.simpleName}
+    tag "$sample_id"
     
-    publishDir params.outdir, mode: 'copy'
+    publishDir "${params.outdir}/${family_id}", mode: 'copy'
 
     input:
-        tuple path (input_bam), path (input_bam_index)
+        tuple val(family_id), val(sample_id), path (input_bam), path (input_bam_index)
         path bed_tr_file
         path snp_vcf_file
         path snp_vcf_index_file
@@ -95,12 +95,13 @@ process genotype_strkit {
     """
 }
 process genotype_TRGT {
-    tag {input_bam.simpleName}
 
-    publishDir params.outdir_trgt, mode: 'copy'
+    tag "$input_bam.simpleName"
+
+    publishDir "${params.outdir_trgt}/${family_id}", mode: 'copy'
 
     input:
-        tuple path (input_bam), path (input_bam_index)
+        tuple val(family_id), val(sample_id), path (input_bam), path (input_bam_index)
         path bed_tr_file
         path reference_genome
         path reference_genome_index
@@ -108,7 +109,7 @@ process genotype_TRGT {
         path reference_genome_gzi_index
     output:
         tuple path("${input_bam.simpleName}_trgt_genotypes.vcf.gz") , path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
-        tuple path("${input_bam.simpleName}_trgt_genotypes.spanning.bam"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam.bai"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
+        tuple path("${input_bam.simpleName}_trgt_genotypes.spanning.bam"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
     
     script:
     """
@@ -130,9 +131,10 @@ process genotype_TRGT {
 
 process mendelian_inheritance {
 
-    publishDir params.outdir, mode: 'copy'
+    publishDir "${params.outdir}/${family_ids}", mode: 'copy'
 
     input:
+         val family_ids
          path genotype_str_vcf 
          path genotype_str_vcf_gz
          path genotype_str_vcf_csi
@@ -165,10 +167,12 @@ process mendelian_inheritance {
 }
 
 process targt_denovo {
-    publishDir params.outdir_trgt, mode: 'copy'
+    publishDir "${params.outdir_trgt}/${family_ids}", mode: 'copy'
 
     input:
-         path reference_genom
+         val family_ids
+         path reference_genome
+         path reference_genome_index
          path bed_tr_file
          tuple path(child_files), path(father_files), path(mother_files)
          tuple path(child_bams), path(father_bams), path(mother_bams)
@@ -179,17 +183,19 @@ process targt_denovo {
      script:
 
      """
-     echo "Performing De Novo Mutation Detection on VCF files: ${genotype_TRGT_vcfs.join(', ')}"
      echo "Reference genome: ${reference_genome}"
      echo "BED file: ${bed_tr_file}"
      echo "child VCF: ${child_files[1]}"
      echo "father VCF: ${father_files[1]}"
      echo "mother VCF: ${mother_files[1]}"
      /home/luisluna/links/scratch/genotype_GA4K_strs_strkit/trgt-denovo-v0.3.0-x86_64-unknown-linux-gnu/trgt-denovo trio --reference ${reference_genome}\
-     --bed ${bed_tr_file}
+     --bed ${bed_tr_file} \
      --father-vcf ${father_files[1]} \
      --mother-vcf ${mother_files[1]} \
      --child-vcf ${child_files[1]} \
+     --father-bam ${father_bams[1]} \
+     --mother-bam ${mother_bams[1]} \
+     --child-bam ${child_bams[1]} \
      --out trgt_denovo_report.tsv
 
      """
@@ -199,19 +205,20 @@ process targt_denovo {
  * Workflow definition
  */
 workflow {
-    merge_bams_files = Channel.fromPath("/project/6007512/shared/C3G/projects/ga4k_from_cedar/pacbio/aligned2/cmh002019*/*.bam")
+    merge_bams_files = Channel.fromPath("/project/6007512/shared/C3G/projects/ga4k_from_cedar/pacbio/aligned2/UNMC-000034*/*.bam")
         .map { bam_path ->
             def parent_dir = bam_path.getParent().getName()
-            def tag = parent_dir.tokenize('.')[0]
-            tuple(tag, bam_path)
+            def sample_id = parent_dir.tokenize('.')[0]           // e.g. UNMC-0034-01
+            def family_id = sample_id.tokenize('-')[0..1].join('-') // e.g. UNMC-0034
+            tuple(family_id, sample_id, bam_path)
         }
         .groupTuple()
-        .map { tag, bam_list -> tuple(tag, bam_list) }
-        //.view { it -> "tag: ${it[0]}, bam files: ${it[1].collect{ it.getName() }}" }
+        .set { grouped_bams }
+        .view { it -> "Grouped BAM files by family: ${it}" }
 
     // To use in merge_bams process:
-    merge_bams_files.set {grouped_bams}
-    grouped_bams.view()
+
+    //grouped_bams.view()
     bed_tr_file = Channel.value(file(params.bed_file))
     snp_files   = Channel.value(file(params.snps_vcf))
     snps_index  = Channel.value(file(params.snps_vcf_index))
@@ -231,23 +238,22 @@ workflow {
 
     //merged.merge_bam.view { it -> "Merged BAM: ${it}" }
    
-    //merged.merge_bam.view()
+    merged.merge_bam.view()
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
 
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
     
-    genotype_str_vcf=genotype_strkit.out.vcf_output.collect().view { it -> "Genotyped VCF files: ${it}" } 
+    genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
-    flat_vcfs = genotype_str_vcf_gz.flatten().view { it -> "flattened VCF GZ files: ${it}" }
+    flat_vcfs = genotype_str_vcf_gz.flatten()//.view { it -> "flattened VCF GZ files: ${it}" }
     sorted_genotypes = flat_vcfs.toSortedList { a, b ->
-    def na = (a.name =~ /-(\d+)_/)[0][1].toInteger()
-    def nb = (b.name =~ /-(\d+)_/)[0][1].toInteger()
-    na <=> nb }
+              def na = (a.name =~ /-(\d+)_/)[0][1].toInteger()
+              def nb = (b.name =~ /-(\d+)_/)[0][1].toInteger()
+              na <=> nb }
     sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
-
-   genotype_TRGT.out.vcf_file_trgt
+    genotype_TRGT.out.vcf_file_trgt
     .flatten()
     .map { file ->
         def sample = (file.name =~ /^(.+?)_merged/)[0][1]
@@ -260,20 +266,8 @@ workflow {
     }                                               // [[files01], [files02], [files03]]
     .set { trio_vcfs }
 
-   trio_vcfs.view() { it -> "All TRGT VCF files: ${it}" }
-   genotype_TRGT.out.spanning_bam.flatten()
-                                                .map { file ->
-                                                          def sample = (file.name =~ /^(.+?)_merged/)[0][1]
-                                                          tuple(sample, file)
-                                                          }
-                                                .groupTuple()
-                                                .toSortedList { a, b -> a[0] <=> b[0] }
-                                                .map { sorted ->
-                                                    sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
-                                                }
-                                                .set{trio_spanning_bams}
-   trio_spanning_bams.view() { it -> "All TRGT spanning BAM files: ${it}" }                                            
-   genotype_TRGT.out.spanning_bam.flatten().map { file ->
+    trio_vcfs.view() { it -> "All TRGT VCF files: ${it}" }                                         
+    genotype_TRGT.out.spanning_bam.flatten().map { file ->
                                                           def sample = (file.name =~ /^(.+?)_merged/)[0][1]
                                                           tuple(sample, file)
                                                           }
@@ -283,13 +277,16 @@ workflow {
                                                     sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
                                                 }
                                                 .set{trio_bams}
-   trio_bams.view { it -> "All TRGT BAM files: ${it}" }
+    trio_bams.view { it -> "All TRGT BAM files: ${it}" }
     
+    merged.map { family_id, sample_id, bam_files ->
+        tuple(family_id)}
+        .unique()
+        .set { family_ids }
 
+    mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
-    mendelian_inheritance(genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
-
-    targt_denovo(reference_genome, bed_tr_file_trgt,trio_vcfs,trio_bams)
+    targt_denovo(family_ids,reference_genome, reference_genome_index,bed_tr_file_trgt,trio_vcfs,trio_bams)
 
 }    
 //nextflow clean $(nextflow log -q) -f
