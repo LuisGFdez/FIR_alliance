@@ -64,7 +64,7 @@ process merge_bams {
 process genotype_strkit {
 
     tag "$sample_id"
-    
+    scratch true
     publishDir "${params.outdir}/${family_id}", mode: 'copy'
 
     input:
@@ -75,9 +75,9 @@ process genotype_strkit {
         path reference_genome
 
     output:
-        path "${input_bam.simpleName}_strkit_genotypes.vcf" , emit: vcf_output
-        path "${input_bam.simpleName}_strkit_genotypes_sorted.vcf.gz" , emit: vcf_compressed
-        path "${input_bam.simpleName}_strkit_genotypes_sorted.vcf.gz.csi", emit: vcf_index
+        path "${sample_id}_strkit_genotypes.vcf" , emit: vcf_output
+        path "${sample_id}_strkit_genotypes_sorted.vcf.gz" , emit: vcf_compressed
+        path "${sample_id}_strkit_genotypes_sorted.vcf.gz.csi", emit: vcf_index
         
 
     script:
@@ -94,8 +94,8 @@ process genotype_strkit {
     --processes 10 \
     --no-tsv
 
-    bcftools sort ${input_bam.simpleName}_strkit_genotypes.vcf | bcftools view -O z -o ${input_bam.simpleName}_strkit_genotypes_sorted.vcf.gz
-    bcftools index ${input_bam.simpleName}_strkit_genotypes_sorted.vcf.gz
+    bcftools sort ${sample_id}_strkit_genotypes.vcf | bcftools view -O z -o ${sample_id}_strkit_genotypes_sorted.vcf.gz
+    bcftools index ${sample_id}_strkit_genotypes_sorted.vcf.gz
 
     """
 }
@@ -113,8 +113,8 @@ process genotype_TRGT {
         path reference_genome_gz
         path reference_genome_gzi_index
     output:
-        tuple path("${input_bam.simpleName}_trgt_genotypes.vcf.gz") , path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz"), path("${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
-        tuple path("${input_bam.simpleName}_trgt_genotypes.spanning.bam"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam"), path("${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
+        tuple path("${sample_id}_trgt_genotypes.vcf.gz") , path("${sample_id}_trgt_genotypes_sorted.vcf.gz"), path("${sample_id}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
+        tuple path("${sample_id}_trgt_genotypes.spanning.bam"), path("${sample_id}_trgt_genotypes.spanning.sorted.bam"), path("${sample_id}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
     
     script:
     """
@@ -125,11 +125,11 @@ process genotype_TRGT {
     --output-prefix ${input_bam.simpleName}_trgt_genotypes \
     --threads $task.cpus
 
-    bcftools sort -Oz -o ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz ${input_bam.simpleName}_trgt_genotypes.vcf.gz
-    bcftools index ${input_bam.simpleName}_trgt_genotypes_sorted.vcf.gz
+    bcftools sort -Oz -o ${sample_id}_trgt_genotypes_sorted.vcf.gz ${sample_id}_trgt_genotypes.vcf.gz
+    bcftools index ${sample_id}_trgt_genotypes_sorted.vcf.gz
 
-    samtools sort -o ${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam ${input_bam.simpleName}_trgt_genotypes.spanning.bam
-    samtools index ${input_bam.simpleName}_trgt_genotypes.spanning.sorted.bam
+    samtools sort -o ${sample_id}_trgt_genotypes.spanning.sorted.bam ${sample_id}_trgt_genotypes.spanning.bam
+    samtools index ${sample_id}_trgt_genotypes.spanning.sorted.bam
     """
 
 }
