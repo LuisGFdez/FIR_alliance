@@ -122,7 +122,7 @@ process genotype_TRGT {
     /home/luisluna/links/scratch/genotype_GA4K_strs_strkit/trgt-v5.0.0-x86_64-unknown-linux-gnu/trgt genotype --genome ${reference_genome} \
     --repeats ${bed_tr_file} \
     --reads ${input_bam} \
-    --output-prefix ${input_bam.simpleName}_trgt_genotypes \
+    --output-prefix ${sample_id}_trgt_genotypes \
     --threads $task.cpus
 
     bcftools sort -Oz -o ${sample_id}_trgt_genotypes_sorted.vcf.gz ${sample_id}_trgt_genotypes.vcf.gz
@@ -292,9 +292,9 @@ workflow {
     trio_bams.view { it -> "All TRGT BAM files: ${it}" }
     
 
-    mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
+   // mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
-    targt_denovo(family_ids,reference_genome, reference_genome_index,bed_tr_file_trgt,trio_vcfs,trio_bams)
+   // targt_denovo(family_ids,reference_genome, reference_genome_index,bed_tr_file_trgt,trio_vcfs,trio_bams)
 
 }    
 //nextflow clean $(nextflow log -q) -f
