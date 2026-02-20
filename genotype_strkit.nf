@@ -88,7 +88,7 @@ process genotype_strkit {
     strkit call ${input_bam} --hq --realign\
     --ref ${reference_genome}\
     --loci ${bed_tr_file} \
-    --vcf ${input_bam.simpleName}_strkit_genotypes.vcf\
+    --vcf ${sample_id}_strkit_genotypes.vcf\
     --incorporate-snvs ${snp_vcf_file} \
     --seed 183 \
     --processes 10 \
@@ -102,7 +102,7 @@ process genotype_strkit {
 process genotype_TRGT {
 
     tag "$input_bam.simpleName"
-
+    scratch true
     publishDir "${params.outdir_trgt}/${family_id}", mode: 'copy'
 
     input:
@@ -113,8 +113,8 @@ process genotype_TRGT {
         path reference_genome_gz
         path reference_genome_gzi_index
     output:
-        tuple path("${sample_id}_trgt_genotypes.vcf.gz") , path("${sample_id}_trgt_genotypes_sorted.vcf.gz"), path("${sample_id}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
-        tuple path("${sample_id}_trgt_genotypes.spanning.bam"), path("${sample_id}_trgt_genotypes.spanning.sorted.bam"), path("${sample_id}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
+        tuple val(sample_id), path("${sample_id}_trgt_genotypes.vcf.gz") , path("${sample_id}_trgt_genotypes_sorted.vcf.gz"), path("${sample_id}_trgt_genotypes_sorted.vcf.gz.csi"), emit: vcf_file_trgt
+        tuple val(sample_id), path("${sample_id}_trgt_genotypes.spanning.bam"), path("${sample_id}_trgt_genotypes.spanning.sorted.bam"), path("${sample_id}_trgt_genotypes.spanning.sorted.bam.bai"), emit: spanning_bam
     
     script:
     """
@@ -173,7 +173,7 @@ process mendelian_inheritance {
 
 process targt_denovo {
     publishDir "${params.outdir_trgt}/${family_ids}", mode: 'copy'
-
+    scratch true
     input:
          val family_ids
          path reference_genome
@@ -266,30 +266,18 @@ workflow {
               na <=> nb }
     sorted_genotypes.view { it -> "Sorted Genotyped VCF files: ${it}" }
     genotype_TRGT.out.vcf_file_trgt
-    .flatten()
-    .map { file ->
-        def sample = (file.name =~ /^(.+?)_merged/)[0][1]
-        tuple(sample, file)
-    }
-    .groupTuple()                                   // [sample_id, [file1, file2, file3]]
-    .toSortedList { a, b -> a[0] <=> b[0] }         // [[s1, [files]], [s2, [files]], [s3, [files]]]
+    .toSortedList { a, b -> a[0] <=> b[0] }   // sort by sample_id (val)
     .map { sorted ->
-        sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
-    }                                               // [[files01], [files02], [files03]]
+        sorted.collect { sample_id, vcf, sorted_vcf, csi -> [vcf, sorted_vcf, csi] }
+    }
     .set { trio_vcfs }
 
-    trio_vcfs.view() { it -> "All TRGT VCF files: ${it}" }                                         
-    genotype_TRGT.out.spanning_bam.flatten().map { file ->
-                                                          def sample = (file.name =~ /^(.+?)_merged/)[0][1]
-                                                          tuple(sample, file)
-                                                          }
-                                                .groupTuple()
-                                                .toSortedList { a, b -> a[0] <=> b[0] }
-                                                .map { sorted ->
-                                                    sorted.collect { sample_id, files -> files } // drop sample IDs, keep only file lists
-                                                }
-                                                .set{trio_bams}
-    trio_bams.view { it -> "All TRGT BAM files: ${it}" }
+    genotype_TRGT.out.spanning_bam
+    .toSortedList { a, b -> a[0] <=> b[0] }   // sort by sample_id (val)
+    .map { sorted ->
+        sorted.collect { sample_id, bam, sorted_bam, bai -> [bam, sorted_bam, bai] }
+    }
+    .set { trio_bams }
     
 
    // mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
