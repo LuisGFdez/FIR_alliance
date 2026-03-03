@@ -1,0 +1,32 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Nextflow work directories
+work/
+.nextflow/
+.nextflow.log*
+
+# Large genomic data outputs
+TR_genotypes/
+results_vcf/
+bam_int_files/
+fasta_int_file/
+trgt_genotypes/
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+*.vcf.gz.csi
+*.bam
+*.bam.bai
+*.fa
+*.fai
+
+# Plots and analysis outputs
+*.png
+*.csv
+*.tsv
+
+# Apptainer images
+*.sif

@@ -14,7 +14,7 @@ params.outdir    = "results_vcf"
 params.outdir_fastas="fasta_int_file"
 params.outdir_bams="bam_int_files"
 params.outdir_trgt="trgt_genotypes"
-
+params.bed_files="tr_bed_files"
 process bgzip_index_fasta {
     publishDir params.outdir_fastas, mode: 'symlink' 
     
@@ -32,7 +32,18 @@ process bgzip_index_fasta {
     samtools faidx ${reference_genome}.gz
     """
 }
+process create_tr_catlog {
+    publishDir "${params.bed_files}", mode: 'copy'
+    input:
+        path reference_genome
+    output:
+        path "*.fa", emit: chr_fastas    // all 25 individual chr FASTA files
+    script:
+    """
+    faidx -x ${reference_genome}
 
+    """
+}
 process merge_bams {
 
     publishDir "${params.outdir_bams}/${family_id}", mode: 'symlink'
@@ -103,6 +114,7 @@ process genotype_TRGT {
 
     tag "$input_bam.simpleName"
     scratch true
+    label 'big_mem'
     publishDir "${params.outdir_trgt}/${family_id}", mode: 'copy'
 
     input:
@@ -242,7 +254,8 @@ workflow {
     //snps_index=Channel.fromPath(params.snps_vcf_index)
                            // .view { it -> "snp_files: ${it}" }        
     ////define processes              
-    bgzip_index_fasta(reference_genome)  
+    bgzip_index_fasta(reference_genome) 
+    create_tr_catlog(reference_genome)  
     merged = merge_bams(grouped_bams)
 
     //merged.merge_bam.view { it -> "Merged BAM: ${it}" }
@@ -280,9 +293,9 @@ workflow {
     .set { trio_bams }
     
 
-   // mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
+    mendelian_inheritance(family_ids,genotype_str_vcf,sorted_genotypes,genotype_str_vcf_csi)
 
-   // targt_denovo(family_ids,reference_genome, reference_genome_index,bed_tr_file_trgt,trio_vcfs,trio_bams)
+    targt_denovo(family_ids,reference_genome, reference_genome_index,bed_tr_file_trgt,trio_vcfs,trio_bams)
 
 }    
 //nextflow clean $(nextflow log -q) -f
