@@ -34,17 +34,23 @@ process bgzip_index_fasta {
 }
 process create_tr_catlog {
     publishDir "${params.bed_files}", mode: 'symlink'
-    container params.snakemake_container
+    //container params.snakemake_container
     scratch true
-    label 'big_mem'
     input:
         path reference_genome
+        path reference_genome_index    // needs the .fai index
+
     output:
-        path "*.fa", emit: chr_fastas    // all 25 individual chr FASTA files
+        path "chr*.fa", emit: chr_fastas
+
     script:
     """
-    faidx -x ${reference_genome}
-
+    # Split into one FA per chromosome
+    cut -f1 ${reference_genome_index} \
+        | grep -E '^chr([0-9]+|X|Y)\$' \
+        | while read chr; do
+            samtools faidx ${reference_genome} \$chr > \${chr}.fa
+          done
     """
 }
 process merge_bams {
@@ -258,7 +264,7 @@ workflow {
                            // .view { it -> "snp_files: ${it}" }        
     ////define processes              
     bgzip_index_fasta(reference_genome) 
-    create_tr_catlog(reference_genome)  
+    create_tr_catlog(reference_genome,reference_genome_index)  
     merged = merge_bams(grouped_bams)
 
     //merged.merge_bam.view { it -> "Merged BAM: ${it}" }
