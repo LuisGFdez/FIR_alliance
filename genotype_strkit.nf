@@ -33,7 +33,9 @@ process bgzip_index_fasta {
     """
 }
 process create_tr_catlog {
-    publishDir "${params.bed_files}", mode: 'copy'
+    publishDir "${params.bed_files}", mode: 'symlink'
+    scratch true
+    label 'big_mem'
     input:
         path reference_genome
     output:
