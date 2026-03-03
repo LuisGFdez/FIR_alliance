@@ -3,8 +3,8 @@
 /*
  * Pipeline parameters
  */
-params.bed_file = "tr_bed_files/hg38_ver6_strkit.sorted.bed"
-params.bed_file_trgt = "tr_bed_files/hg38_ver6_trgt.sorted.bed"
+params.bed_file = "tr_bed_files/tr_catalog_strkit.bed"
+params.bed_file_trgt = "tr_bed_files/tr_catalog_trgt.bed"
 
 params.snps_vcf="strkit_int_files/00-All.vcf.gz"
 params.snps_vcf_index="strkit_int_files/00-All.vcf.gz.tbi"
@@ -14,7 +14,7 @@ params.outdir    = "results_vcf"
 params.outdir_fastas="fasta_int_file"
 params.outdir_bams="bam_int_files"
 params.outdir_trgt="trgt_genotypes"
-params.split_fastas="fast_split_files"
+params.bed_files="tr_bed_files"
 process bgzip_index_fasta {
     publishDir params.outdir_fastas, mode: 'symlink' 
     
@@ -33,7 +33,7 @@ process bgzip_index_fasta {
     """
 }
 process create_tr_catlog {
-    publishDir "${params.split_fastas}", mode: 'symlink'
+    publishDir "${params.bed_files}", mode: 'symlink'
     //container params.snakemake_container
     scratch true
     input:
