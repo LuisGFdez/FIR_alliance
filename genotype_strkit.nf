@@ -34,6 +34,7 @@ process bgzip_index_fasta {
 }
 process create_tr_catlog {
     publishDir "${params.bed_files}", mode: 'symlink'
+    container params.snakemake_container
     scratch true
     label 'big_mem'
     input:
