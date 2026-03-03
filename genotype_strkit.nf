@@ -14,7 +14,7 @@ params.outdir    = "results_vcf"
 params.outdir_fastas="fasta_int_file"
 params.outdir_bams="bam_int_files"
 params.outdir_trgt="trgt_genotypes"
-params.bed_files="tr_bed_files"
+params.split_fastas="fast_split_files"
 process bgzip_index_fasta {
     publishDir params.outdir_fastas, mode: 'symlink' 
     
@@ -33,7 +33,7 @@ process bgzip_index_fasta {
     """
 }
 process create_tr_catlog {
-    publishDir "${params.bed_files}", mode: 'symlink'
+    publishDir "${params.split_fastas}", mode: 'symlink'
     //container params.snakemake_container
     scratch true
     input:
