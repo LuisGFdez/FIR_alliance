@@ -31,3 +31,4 @@ trgt_genotypes/
 
 # Apptainer images
 *.sif
+homo_catalog.no_overlaps.bed
