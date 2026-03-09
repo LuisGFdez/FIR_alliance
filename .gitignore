@@ -22,6 +22,7 @@ trgt_genotypes/
 *.bam.bai
 *.fa
 *.fai
+*.bed
 
 # Plots and analysis outputs
 *.png

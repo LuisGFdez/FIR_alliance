@@ -154,6 +154,41 @@ process genotype_TRGT {
     """
 
 }
+process filter_trgt_genotypes {
+
+    tag "$sample_id"
+    scratch true
+    label 'small_mem'
+    publishDir "${params.outdir_trgt}/${family_id}", mode: 'copy'
+
+    input:
+        tuple val(family_id), val(sample_id), path (input_bam), path (input_bam_index)
+        tuple val(family_id), val(sample_id), path (vcf_file), path (vcf_sorted), path (vcf_index)
+
+    input:
+        tuple val(sample_id), path (vcf_file), path (vcf_sorted), path (vcf_index)
+    output:
+        tuple val(sample_id), path("${sample_id}_trgt_filtered_max.vcf") , path("${sample_id}_trgt_filtered_max_sd.vcf"), path("${sample_id}_trgt_filtered_max_sd_ap.vcf"), emit: vcf_trgt_filtered
+    
+    script:
+    """
+    echo "Filtering TRGT genotypes for sample: ${sample_id}"
+    gunzip -c ${vcf_sorted} > ${vcf_sorted%.gz}
+    vcf_sorted=${vcf_sorted%.gz}
+    echo "Uncompressed VCF: ${vcf_sorted}"
+    # Filter by missing data (max_missing = 1)
+    vcftools --vcf ${vcf_sorted} --max-missing 1 --recode --recode-INFO-all --out "${sample_id}_trgt_filtered_max"
+
+    # Filter alleles by spanning depth (SD_THRESHOLD = 3)
+    bcftools view -i "MIN(FORMAT/SD) >= 3" "${sample_id}_trgt_filtered_max.recode.vcf" -o "${sample_id}_trgt_filtered_max_sd.vcf"
+
+    # Filter alleles by purity score (AP_THRESHOLD = 0.3)
+    bcftools view -i "MIN(FORMAT/AP) >= 0.3" "${sample_id}_trgt_filtered_max_sd.vcf" -o "${sample_id}_trgt_filtered_max_sd_ap.vcf"
+
+    echo "Processing completed. Final output file: ${sample_id}_trgt_filtered_max_sd_ap.vcf"
+    """
+
+}
 
 process mendelian_inheritance {
 
@@ -274,10 +309,13 @@ workflow {
     family_id
      }.unique()
     //merged.merge_bam_index.view { it -> "Merged BAM Index: ${it}" }
-
+    ////Genotype with strkit and trg
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
+    ///filter trg genotypes by missing data, spanning depth and purity score//
+    filter_trgt_genotypes(merged.merge_bam,genotype_TRGT.out.vcf_file_trgt)
     
+    ////Collect outputs for downstream analysis
     genotype_str_vcf=genotype_strkit.out.vcf_output.collect()//.view { it -> "Genotyped VCF files: ${it}" } 
     genotype_str_vcf_gz=genotype_strkit.out.vcf_compressed.collect()
     genotype_str_vcf_csi=genotype_strkit.out.vcf_index.collect()
