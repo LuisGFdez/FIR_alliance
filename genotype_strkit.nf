@@ -182,8 +182,8 @@ process genotype_TRGT {
     samtools sort -o ${sample_id}_trgt_genotypes.spanning.sorted.bam ${sample_id}_trgt_genotypes.spanning.bam
     samtools index ${sample_id}_trgt_genotypes.spanning.sorted.bam
     """
-
 }
+
 process filter_trgt_genotypes {
 
     tag "$sample_id"
@@ -193,7 +193,7 @@ process filter_trgt_genotypes {
 
     input:
         tuple val(family_id), val(sample_id), path (input_bam), path (input_bam_index)
-        tuple val(family_id), val(sample_id), path (vcf_file), path (vcf_sorted), path (vcf_index)
+        tuple path(vcf_file), path(vcf_sorted), path(vcf_index)
 
     output:
         tuple val(sample_id), path("${sample_id}_trgt_filtered_max.vcf") , path("${sample_id}_trgt_filtered_max_sd.vcf"), path("${sample_id}_trgt_filtered_max_sd_ap.vcf"), emit: vcf_trgt_filtered
@@ -201,9 +201,7 @@ process filter_trgt_genotypes {
     script:
     """
     echo "Filtering TRGT genotypes for sample: ${sample_id}"
-    gunzip -c ${vcf_sorted} > ${vcf_sorted%.gz}
-    vcf_sorted=${vcf_sorted%.gz}
-    echo "Uncompressed VCF: ${vcf_sorted}"
+ 
     # Filter by missing data (max_missing = 1)
     vcftools --vcf ${vcf_sorted} --max-missing 1 --recode --recode-INFO-all --out "${sample_id}_trgt_filtered_max"
 
@@ -341,7 +339,10 @@ workflow {
     genotype_strkit(merged.merge_bam,bed_tr_file,snp_files,snps_index,bgzip_index_fasta.out.fasta_gz)
     genotype_TRGT(merged.merge_bam, bed_tr_file_trgt,reference_genome,reference_genome_index,bgzip_index_fasta.out.fasta_gz,bgzip_index_fasta.out.fasta_gzi)
     ///filter trg genotypes by missing data, spanning depth and purity score//
-    filter_trgt_genotypes(merged.merge_bam,genotype_TRGT.out.vcf_file_trgt)
+    filter_trgt_genotypes(
+    merged.merge_bam,
+    genotype_TRGT.out.vcf_file_trgt.map { sample_id, vcf, sorted_vcf, csi -> tuple(vcf, sorted_vcf, csi) }
+)
     //filter_strkit_genotypes(merged.merge_bam,genotype_strkit.out.vcf_output)
     
     ////Collect outputs for downstream analysis
