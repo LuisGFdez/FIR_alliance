@@ -4,7 +4,7 @@
  * Pipeline parameters
  */
 params.bed_file = "tr_bed_files/tr_catalog_strkit.bed"
-params.bed_file_trgt = "tr_bed_files/tr_catalog_trgt.bed"
+params.bed_file_trgt = "tr_bed_files/output_trgt.bed"
 
 params.snps_vcf="strkit_int_files/00-All.vcf.gz"
 params.snps_vcf_index="strkit_int_files/00-All.vcf.gz.tbi"
@@ -203,7 +203,7 @@ process filter_trgt_genotypes {
     echo "Filtering TRGT genotypes for sample: ${sample_id}"
  
     # Filter by missing data (max_missing = 1)
-    vcftools --vcf ${vcf_sorted} --max-missing 1 --recode --recode-INFO-all --out "${sample_id}_trgt_filtered_max"
+    vcftools --gzvcf ${vcf_sorted} --max-missing 1 --recode --recode-INFO-all --out "${sample_id}_trgt_filtered_max" ${vcf_sorted} --max-missing 1 --recode --recode-INFO-all --out "${sample_id}_trgt_filtered_max"
 
     # Filter alleles by spanning depth (SD_THRESHOLD = 3)
     bcftools view -i "MIN(FORMAT/SD) >= 3" "${sample_id}_trgt_filtered_max.recode.vcf" -o "${sample_id}_trgt_filtered_max_sd.vcf"
@@ -378,3 +378,4 @@ workflow {
 //nextflow clean $(nextflow log -q) -f
 //nextflow run genotype_strkit.nf -bg -with-trace -resume
 //source ./GA4K/bin/activate
+///home/luisluna/links/projects/rrg-bourqueg-ad/C3G/projects/ga4k_meth_2025-10-30
