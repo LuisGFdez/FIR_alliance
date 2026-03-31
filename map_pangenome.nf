@@ -2,9 +2,9 @@
 params.outdir_bams="bam_int_files"
 params.outdir_pangenome="pangenome_mapped_bams"
 params.fastq_dir = "/home/luisluna/links/scratch/genotype_GA4K_strs_strkit/fastq_out"
-params.gbz_file="pangenomes_resources/hprc-v1.1-mc-chm13.gbz"
+params.gbz_file="pangenome_resources/hprc-v1.1-mc-chm13.gbz"
 params.index_files = "pangenomes_resources/hprc-v1.1-mc-chm13.{gbz,dist,min}"
-params.vg_container  = "vg_tools/vg.sif"
+params.vg_container  = "vg_tool/vg.sif"
 params.pbtk_container = "dockers/pbtk.sif"
 process merge_bams {
     container params.pbtk_container
@@ -75,21 +75,17 @@ workflow {
         .map { family_id_list, sample_id, bam_list ->
         tuple(family_id_list[0], sample_id, bam_list)  // take first element of family_id list
     }
-        .view { it -> "Grouped BAM files by family: ${it}" }
+        //.view { it -> "Grouped BAM files by family: ${it}" }
         .set { grouped_bams }
 
-   
-
-    
-
     fastq_ch = Channel
-        .fromPath("${params.fastq_dir}/**/*_merged_2.fastq.gz")
-        .map { fq ->
-            def sample_id = fq.getName().tokenize('_')[0..2].join('-')  // e.g. UNMC-000034-01
-            def family_id = sample_id.tokenize('-')[0..1].join('-')     // e.g. UNMC-000034
-            tuple(family_id, sample_id, fq)
-        }
-        .view { "FASTQ file: ${it}" }
+    .fromPath("${params.fastq_dir}/**/*_merged_2.fastq.gz")
+    .map { fq ->
+        def family_id = fq.getName().tokenize('-')[0..1].join('-')  // e.g. UNMC-000034
+        tuple(family_id, fq)
+    }
+    .groupTuple()  // → [UNMC-000034, [file1.fastq.gz, file2.fastq.gz, file3.fastq.gz]]
+        //.view { "FASTQ file: ${it}" }
 
     ////Run processes
     //Bam merging
