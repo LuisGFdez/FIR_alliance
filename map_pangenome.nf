@@ -4,9 +4,10 @@ params.outdir_pangenome="pangenome_mapped_bams"
 params.fastq_dir = "/home/luisluna/links/scratch/genotype_GA4K_strs_strkit/fastq_out"
 params.gbz_file="pangenomes_resources/hprc-v1.1-mc-chm13.gbz"
 params.index_files = "pangenomes_resources/hprc-v1.1-mc-chm13.{gbz,dist,min}"
-
+params.vg_container  = "vg_tools/vg.sif"
+params.pbtk_container = "dockers/pbtk.sif"
 process merge_bams {
-    dockers/apptainer 'pbtk.sif'
+    container params.pbtk_container
     publishDir "${params.outdir_bams}/${family_id}", mode: 'symlink'
     scratch true
 
@@ -30,7 +31,7 @@ process merge_bams {
 }
 
 process map_to_pangenome {
-    container 'vg.sif'
+    container params.vg_container
     publishDir "${params.outdir_pangenome}/${family_id}", mode: 'symlink'
     scratch true
     label "big_mem"
