@@ -23,33 +23,36 @@ def vcf_to_df(filepath):
         })
     
     return pd.DataFrame(records)
+# %%
+df_trgt_child = vcf_to_df("Filter_tr_genotypes/UNMC-000034-01_trgt_filtered_max_sd_ap.vcf")
+df_trgt_father = vcf_to_df("Filter_tr_genotypes/UNMC-000034-02_trgt_filtered_max_sd_ap.vcf")
+df_trgt_mother = vcf_to_df("Filter_tr_genotypes/UNMC-000034-03_trgt_filtered_max_sd_ap.vcf")    
+# %%
+print(df_trgt_child.head())
 
-df = vcf_to_df("Filter_tr_genotypes/UNMC-000034-01_trgt_filtered_max_sd_ap.vcf")
-print(df.head())
-print(f"\nTotal STR loci: {len(df):,}")
+print(f"\nTotal STR loci: {len(df_trgt_child):,}")
+print(f"\nTotal STR loci: {len(df_trgt_father):,}")
+print(f"\nTotal STR loci: {len(df_trgt_mother):,}")
 # %%
 # ── Overall summary of numeric columns ───────────────────────────
-print(df[["TR_length", "AL_allele1", "AL_allele2", "MOTIF_SIZE"]].describe())
+print(df_trgt_child[["TR_length", "AL_allele1", "AL_allele2", "MOTIF_SIZE"]].describe())
 
 
 # ── Motif size counts ─────────────────────────────────────────────
 print("\nMotif Size Distribution:")
-print(df["MOTIF_SIZE"].value_counts().sort_index())
+print(df_trgt_child["MOTIF_SIZE"].value_counts().sort_index())
 #%%
-df["MOTIF_CLASS"] = df["MOTIF_SIZE"].apply(lambda x: str(x) if x <= 6 else "7+")
-df["MOTIF_CLASS"].head()
-df.head(10)
-df_multi = df[df["MOTIFS"].str.contains(",", na=False)].reset_index(drop=True)
-df[df["MOTIFS"].str.contains(",", na=False)].count()
+df_trgt_child["MOTIF_CLASS"] = df_trgt_child["MOTIF_SIZE"].apply(lambda x: str(x) if x <= 6 else "7+")
+df_trgt_child["MOTIF_CLASS"].head()
+df_trgt_child.head(10)
+df_multi = df_trgt_child[df_trgt_child["MOTIFS"].str.contains(",", na=False)].reset_index(drop=True)
+df_trgt_child[df_trgt_child["MOTIFS"].str.contains(",", na=False)].count()
 #print(f"TRs with multiple motifs: {len(df_multi)}")
 #print(df_multi)
 #########################
 # %%%
 
-from cyvcf2 import VCF
-import pandas as pd
-
-def vcf_to_df(filepath):
+def vcf_to_df_strkit(filepath):
     records = []
     vcf = VCF(filepath)
 
@@ -109,17 +112,22 @@ def vcf_to_df(filepath):
         })
 
     return pd.DataFrame(records)
-
-df = vcf_to_df("Filter_tr_genotypes/UNMC-000034-01_strkit_filtered_max_sd_ap.vcf.gz")
-print(df.head())
-print(f"\nTotal STR loci: {len(df):,}")
 # %%
-df.shape
+df_strkit_child = vcf_to_df_strkit("Filter_tr_genotypes/UNMC-000034-01_strkit_filtered_max_sd_ap.vcf.gz")
+df_strkit_father = vcf_to_df_strkit("Filter_tr_genotypes/UNMC-000034-02_strkit_filtered_max_sd_ap.vcf.gz")
+df_strkit_mother = vcf_to_df_strkit("Filter_tr_genotypes/UNMC-000034-03_strkit_filtered_max_sd_ap.vcf.gz")  
+# %%
+print(df_strkit_child.head())
+print(f"\nTotal STR loci: {len(df_strkit_child):,}")
+print(f"\nTotal STR loci: {len(df_strkit_father):,}")
+print(f"\nTotal STR loci: {len(df_strkit_mother):,}")
+# %%
+df_strkit_child.shape
 #
-print(df["TR_length"].describe())
-print(f"Max: {df['TR_length'].max()}")
-print(f"Min: {df['TR_length'].min()}")
-print(df.describe())
+print(df_strkit_child["TR_length"].describe())
+print(f"Max: {df_strkit_child['TR_length'].max()}")
+print(f"Min: {df_strkit_child['TR_length'].min()}")
+print(df_strkit_child.describe())
 # %%
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -135,7 +143,7 @@ BG          = "white"
 GRID_COLOR  = "#e0e0e0"
 SPINE_COLOR = "#bbbbbb"
 
-CHR_ORDER = [f"chr{i}" for i in range(1, 22)] + ["chrX", "chrY"]
+CHR_ORDER = [f"chr{i}" for i in range(1, 23)] + ["chrX", "chrY"]
 
 def sort_chroms(series):
     present = set(series)
@@ -145,46 +153,57 @@ def sort_chroms(series):
 # ══════════════════════════════════════════════════════════════════
 # PLOT 1 – TR Length Distribution (genome-wide)
 # ══════════════════════════════════════════════════════════════════
-fig, axes = plt.subplots(1, 1, figsize=(16, 6))
-fig.patch.set_facecolor(BG)
-fig.suptitle("TR Length Distribution — Genome Wide",
-             fontsize=TITLE_SIZE, fontweight="bold", color="#222")
 
 # %%
+from scipy.ndimage import gaussian_filter1d
 
 fig, ax = plt.subplots(figsize=(14, 6))
 fig.patch.set_facecolor(BG)
 ax.set_facecolor(BG)
 
-data = df["TR_length"].dropna()
+data = df_trgt_child["TR_length"].dropna()
 data = data[data > 0]
 
-MAX_BP = 1000
-BINS   = 100
+MAX_BP = 3000
+BINS   = 300
 
 counts, bin_edges = np.histogram(data[data <= MAX_BP], bins=BINS, range=(0, MAX_BP))
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 bin_width   = bin_edges[1] - bin_edges[0]
 density     = counts / (len(data) * bin_width)
 
-ax.plot(bin_centers, density, color="#333333", linewidth=1.2)
+# --- Smoothing ---
+density_smooth = gaussian_filter1d(density, sigma=3)
+density_smooth = np.clip(density_smooth, 1e-10, None)  # avoid log(0)
+
+# --- Main line ---
+ax.plot(bin_centers, density_smooth, color="#2C7BB6", linewidth=2, zorder=3)
+
+# --- Gradient fill under curve ---
+ax.fill_between(bin_centers, density_smooth, 1e-10,
+                alpha=0.15, color="#2C7BB6", zorder=2)
+
 ax.set_yscale("log")
-ax.yaxis.set_major_formatter(ticker.LogFormatterExponent(base=10))
-ax.set_ylabel("Count (log)", fontsize=LABEL_SIZE, color="#222")
 ax.yaxis.set_major_formatter(ticker.LogFormatterMathtext())
+
 ax.set_xlim(0, MAX_BP)
-ax.set_xlabel("TR Length (bp)",  fontsize=LABEL_SIZE, color="#222")
-ax.set_ylabel("Density (log)",   fontsize=LABEL_SIZE, color="#222")
+ax.set_ylim(bottom=1e-8)
+
+ax.set_xlabel("TR Length (bp)", fontsize=LABEL_SIZE, color="#222")
+ax.set_ylabel("Density (log)",  fontsize=LABEL_SIZE, color="#222")
 ax.set_title("TR Length Density Distribution",
-             fontsize=TITLE_SIZE, fontweight="bold", color="#222", pad=12)
-ax.tick_params(colors="#222", labelsize=TICK_SIZE)
+             fontsize=TITLE_SIZE, fontweight="bold", color="#222", pad=14)
+
+ax.tick_params(colors="#444", labelsize=TICK_SIZE)
 ax.spines[["top", "right"]].set_visible(False)
 ax.spines[["left", "bottom"]].set_color(SPINE_COLOR)
-ax.yaxis.grid(True, color=GRID_COLOR, linewidth=0.6)
+
+ax.yaxis.grid(True, color=GRID_COLOR, linewidth=0.5, linestyle="--", alpha=0.7)
+ax.xaxis.grid(True, color=GRID_COLOR, linewidth=0.5, linestyle="--", alpha=0.4)
 ax.set_axisbelow(True)
 
 plt.tight_layout()
-plt.savefig("plot_tr_density.png", dpi=180, bbox_inches="tight", facecolor=BG)
+plt.savefig("results_april_2026/plot_tr_density_trgt.png", dpi=180, bbox_inches="tight", facecolor=BG)
 plt.show()
 # ── Plot ──────────────────────────────────────────────────────────
 
@@ -223,7 +242,7 @@ plt.show()
 # ══════════════════════════════════════════════════════════════════
 # PLOT 2 – Number of TRs per Chromosome
 # ══════════════════════════════════════════════════════════════════
-canon_df = df[df["CHROM"].isin(CHR_ORDER)]
+canon_df = df_strkit_child[df_strkit_child["CHROM"].isin(CHR_ORDER)]
 counts   = canon_df.groupby("CHROM").size()
 chroms   = sort_chroms(counts.index)
 counts   = counts.reindex(chroms, fill_value=0)
@@ -259,13 +278,14 @@ ax.yaxis.grid(True, color=GRID_COLOR, linewidth=0.7, zorder=0)
 ax.set_axisbelow(True)
 
 plt.tight_layout()
-plt.savefig("plot_tr_per_chrom.png", dpi=180,
+plt.savefig("results_april_2026/plot_tr_per_chrom_strkit.png", dpi=180,
             bbox_inches="tight", facecolor=BG)
 plt.show()
 
 # ══════════════════════════════════════════════════════════════════
 # PLOT 3 – Motif Proportion per Chromosome (stacked bar)
 # ══════════════════════════════════════════════════════════════════
+# %%
 def classify_motif_size(size):
     if size == 1:    return "1"
     elif size == 2:  return "2"
@@ -283,8 +303,8 @@ COLORS = {
     "7-20": "#46327e", ">20":          "#440154",
 }
 
-df["MOTIF_CLASS"] = df["MOTIF_SIZE"].apply(classify_motif_size)
-plot_df = df[df["CHROM"].isin(CHR_ORDER[:-1])].copy()  # exclude chrM
+df_trgt_child["MOTIF_CLASS"] = df_trgt_child["MOTIF_SIZE"].apply(classify_motif_size)
+plot_df = df_trgt_child[df_trgt_child["CHROM"].isin(CHR_ORDER[:-1])].copy()  # exclude chrM
 chroms  = [c for c in CHR_ORDER if c in plot_df["CHROM"].values]
 
 counts_m = (
@@ -331,7 +351,7 @@ ax.legend(handles=legend_patches, title="Motif length (bp)",
           loc="upper right", framealpha=0.9, edgecolor=SPINE_COLOR)
 
 plt.tight_layout()
-plt.savefig("plot_motif_proportion_per_chrom.png", dpi=180,
+plt.savefig("results_april_2026/plot_motif_proportion_per_chrom_trgt.png", dpi=180,
             bbox_inches="tight", facecolor=BG)
 plt.show()
 
@@ -511,7 +531,7 @@ def draw_chrom(ax, x_center, chrom, densities, max_density,
 
 
 def make_dual_ideogram(df, output="plot_chrom_ideogram_dual.png"):
-    plot_df = df[df["CHROM"].isin(CHR_ORDER)].copy()
+    plot_df = df_trgt_child[df_trgt_child["CHROM"].isin(CHR_ORDER)].copy()
     chroms  = [c for c in CHR_ORDER if c in plot_df["CHROM"].values]
     n       = len(chroms)
 
@@ -592,7 +612,7 @@ def make_dual_ideogram(df, output="plot_chrom_ideogram_dual.png"):
     print(f"Saved: {output}")
 
 
-make_dual_ideogram(df)
+make_dual_ideogram(df_trgt_child, output="results_april_2026/plot_chrom_ideogram_dual_trgt.png")
 # %%import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -766,7 +786,7 @@ def draw_chrom(ax, x_center, chrom, densities, max_density,
     ax.add_patch(outline)
 
 
-def make_dual_ideogram(df, output="plot_chrom_ideogram_dual.png"):
+def make_dual_ideogram(df, output="results_april_2026/plot_chrom_ideogram_dual_trgt.png"):
     plot_df = df[df["CHROM"].isin(CHR_ORDER)].copy()
     chroms  = [c for c in CHR_ORDER if c in plot_df["CHROM"].values]
     n       = len(chroms)
@@ -848,6 +868,6 @@ def make_dual_ideogram(df, output="plot_chrom_ideogram_dual.png"):
     print(f"Saved: {output}")
 
 
-make_dual_ideogram(df)
+make_dual_ideogram(df_trgt_child)
 
 # %%

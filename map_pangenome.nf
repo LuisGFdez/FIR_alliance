@@ -35,31 +35,26 @@ process map_to_pangenome {
     publishDir "${params.outdir_pangenome}/${family_id}", mode: 'symlink'
     scratch true
     label "big_mem"
-    tag "$family_id"
+    tag "${family_id}__${sample_id}"
 
     input:
-    tuple val(family_id), path(fastq_files)   // all 3 staged, processed sequentially
+    tuple val(family_id), val(sample_id), path(fastq_file)   // single FASTQ per job
     path index_files
 
     output:
-    tuple val(family_id), path("${family_id}_mapped.gam"), emit: mapped_gam
+    tuple val(family_id), val(sample_id), path("${family_id}_${sample_id}_mapped.gam"), emit: mapped_gam
 
     script:
     def gbz = index_files.find { it.name.endsWith('.gbz') }
-    // Sort to ensure consistent order: -01, -02, -03
-    def sorted_fqs = fastq_files.sort { it.name }
     """
-    # Stream FASTQs one after another into vg giraffe
-    # No temp file needed — cat streams directly
-    cat ${sorted_fqs.join(' ')} | vg giraffe \
+    vg giraffe \
         -b hifi \
         -Z ${gbz} \
-        -f - \
+        -f ${fastq_file} \
         -p \
-        --threads ${task.cpus} \
-        > ${family_id}_mapped.gam
+        > ${family_id}_${sample_id}_mapped.gam
     """
-} 
+}
 
 workflow {
     index_files_ch = Channel.fromPath(params.index_files).collect()
@@ -79,19 +74,19 @@ workflow {
         .set { grouped_bams }
 
     fastq_ch = Channel
-    .fromPath("${params.fastq_dir}/**/*_merged_2.fastq.gz")
-    .map { fq ->
-        def family_id = fq.getName().tokenize('-')[0..1].join('-')  // e.g. UNMC-000034
-        tuple(family_id, fq)
-    }
-    .groupTuple()  // → [UNMC-000034, [file1.fastq.gz, file2.fastq.gz, file3.fastq.gz]]
-        //.view { "FASTQ file: ${it}" }
+        .fromPath("${params.fastq_dir}/**/*_merged_2.fastq.gz")
+        .map { fq ->
+            def sample_id = fq.getName().tokenize('.')[0]               // e.g. UNMC-000034-01_merged_2 → adjust as needed
+            def family_id = fq.getName().tokenize('-')[0..1].join('-')  // e.g. UNMC-000034
+            tuple(family_id, sample_id, fq)
+        }  // → [UNMC-000034, [file1.fastq.gz, file2.fastq.gz, file3.fastq.gz]]
+        .view { "FASTQ file: ${it}" }
 
     ////Run processes
     //Bam merging
     merged = merge_bams(grouped_bams)
-    merged.merge_bam.view()
+    //merged.merge_bam.view()
     //Align to pangenome
-    mapped = map_to_pangenome(fastq_ch, index_files_ch)
+    map_to_pangenome(fastq_ch, index_files_ch)
 
 }  

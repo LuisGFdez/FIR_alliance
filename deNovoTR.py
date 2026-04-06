@@ -101,7 +101,7 @@ merged_df = df.merge(df_filtered_denovo, left_on='TRID', right_on='trid', how='i
 print(merged_df.head())
 print(f"\nTotal de novo STRs with VCF annotations: {len(merged_df):,}")
 # %%
-merged_df[["CHROM", "MOTIF_CLASS","MOTIFS","AM_allele1","AM_allele2","allele_origin","denovo_status","father_AL","mother_AL","child_AL"]].head()
+merged_df[["CHROM","MOTIFS","AM_allele1","AM_allele2","allele_origin","denovo_status","father_AL","mother_AL","child_AL"]].head()
 # %%
 import pysam
 import pathlib
@@ -133,7 +133,7 @@ def GCcontent(sequence):
     return (sequence.count('G') + sequence.count('C')) / (len(sequence) - sequence.count('N'))
 # %%
 merged_df["GC_CONTENT"] = merged_df["MOTIFS"].apply(GCcontent)
-merged_df[["CHROM", "MOTIF_CLASS","MOTIFS","GC_CONTENT","AM_allele1","AM_allele2","allele_origin","denovo_status","father_AL","mother_AL","child_AL"]].head()
+merged_df[["CHROM","MOTIFS","GC_CONTENT","AM_allele1","AM_allele2","allele_origin","denovo_status","father_AL","mother_AL","child_AL"]].head()
 merged_df["GC_CONTENT"].describe()
 # %%
 import matplotlib.pyplot as plt
@@ -148,7 +148,7 @@ BG          = "white"
 GRID_COLOR  = "#e0e0e0"
 SPINE_COLOR = "#bbbbbb"
 
-CHR_ORDER = [f"chr{i}" for i in range(1, 22)] + ["chrX", "chrY"]
+CHR_ORDER = [f"chr{i}" for i in range(1, 24)] + ["chrX", "chrY"]
 
 def sort_chroms(series):
     present = set(series)
